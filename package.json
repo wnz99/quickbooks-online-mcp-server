@@ -19,7 +19,7 @@
         "test": "vitest run",
         "lint:fix": "eslint --fix",
         "lint": "eslint .",
-        "auth": "bun dist/auth-server.js"
+        "auth": "bun src/authServer.ts"
     },
     "dependencies": {
         "dotenv": "^16.4.7",
