@@ -1,6 +1,10 @@
 import { FastMCP } from "fastmcp";
 import type { ServerConfig } from "./types";
 import { setLogLevel, logger } from "./utils/logger";
+import { eulaHtml } from "./pages/eula";
+import { privacyHtml } from "./pages/privacy";
+import { launchHtml } from "./pages/launch";
+import { getDisconnectHtml } from "./pages/disconnect";
 
 import { registerAccountTools } from "./tools/accounts";
 import { registerBillTools } from "./tools/bills";
@@ -37,6 +41,7 @@ import { registerVendorCreditTools } from "./tools/vendorCredits";
 import { registerReportTools } from "./tools/reports";
 import { registerResources } from "./resources/index";
 import { registerPrompts } from "./prompts/index";
+import { quickbooksClient } from "./clients/quickbooksClient";
 
 export function createServer(config: ServerConfig) {
   if (config.logLevel) setLogLevel(config.logLevel);
@@ -127,6 +132,32 @@ export async function startServer(config: ServerConfig) {
   if (config.transport === "stdio") {
     await server.start({ transportType: "stdio" });
   } else {
+    // Register legal pages (required by Intuit for production apps)
+    const app = server.getApp();
+    app.get("/eula", (c) => c.html(eulaHtml));
+    app.get("/privacy", (c) => c.html(privacyHtml));
+    app.get("/launch", (c) => c.html(launchHtml));
+    app.get("/disconnect", (c) => {
+      const realmId = c.req.query("realmId") ?? null;
+      return c.html(getDisconnectHtml(realmId));
+    });
+
+    // OAuth routes
+    app.get("/auth", (c) => {
+      const authUrl = quickbooksClient.getAuthorizationUrl();
+      return c.redirect(authUrl);
+    });
+
+    app.get("/callback", async (c) => {
+      try {
+        await quickbooksClient.handleOAuthCallback(c.req.url);
+        return c.html(`<html><body style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;margin:0;font-family:Arial,sans-serif;background:#f5f5f5"><h2 style="color:#2E8B57">Successfully connected to QuickBooks!</h2><p>You can close this window now.</p></body></html>`);
+      } catch (error) {
+        logger.error("OAuth callback error", error);
+        return c.html(`<html><body style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;margin:0;font-family:Arial,sans-serif;background:#fff0f0"><h2 style="color:#d32f2f">Error connecting to QuickBooks</h2><p>Please check the server logs for details.</p></body></html>`, 500);
+      }
+    });
+
     const port = config.port || 3000;
     await server.start({
       transportType: "httpStream",

@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { paginationSchema } from "./shared";
 
 const invoiceLineItemSchema = z.object({
   item_ref: z.string().min(1).describe("Item ID reference"),

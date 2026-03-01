@@ -43,5 +43,22 @@ export class EntityNotFoundError extends MCPError {
 export function formatError(error: unknown): string {
   if (error instanceof Error) return error.message;
   if (typeof error === "string") return error;
+
+  if (typeof error === "object" && error !== null) {
+    const obj = error as Record<string, unknown>;
+    const tid = obj.intuit_tid ? ` [intuit_tid: ${obj.intuit_tid}]` : "";
+
+    // QBO Fault response format
+    if (obj.Fault) {
+      const fault = obj.Fault as { Error?: Array<{ Message?: string; Detail?: string }> };
+      const messages =
+        fault.Error?.map((e) => e.Message || e.Detail).join("; ") ||
+        "Unknown QuickBooks error";
+      return messages + tid;
+    }
+
+    return JSON.stringify(error) + tid;
+  }
+
   return JSON.stringify(error);
 }

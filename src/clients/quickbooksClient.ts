@@ -23,7 +23,7 @@ class QuickbooksClient {
   private quickbooksInstance?: QuickBooks;
   private oauthClient?: OAuthClient;
   private isAuthenticating: boolean = false;
-  private redirectUri: string = 'http://localhost:8000/callback';
+  private redirectUri: string = process.env.QUICKBOOKS_REDIRECT_URI || 'http://localhost:8000/callback';
   private initialized: boolean = false;
 
   private ensureInitialized(): void {
@@ -191,9 +191,40 @@ class QuickbooksClient {
         access_token: this.accessToken,
         expires_in: expiresIn,
       };
-    } catch (error: any) {
-      throw new Error(`Failed to refresh Quickbooks token: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to refresh Quickbooks token: ${message}`);
     }
+  }
+
+  getAuthorizationUrl(): string {
+    this.ensureInitialized();
+    return this.oauthClient!.authorizeUri({
+      scope: [OAuthClient.scopes.Accounting as string],
+      state: 'intuit-auth'
+    }).toString();
+  }
+
+  async handleOAuthCallback(callbackUrl: string): Promise<{ refreshToken: string; realmId: string }> {
+    this.ensureInitialized();
+    const response = await this.oauthClient!.createToken(callbackUrl);
+    const tokens = response.token;
+    this.refreshToken = tokens.refresh_token;
+    this.realmId = tokens.realmId;
+
+    logger.info('=== QuickBooks OAuth Tokens ===');
+    logger.info(`QUICKBOOKS_REFRESH_TOKEN=${this.refreshToken}`);
+    logger.info(`QUICKBOOKS_REALM_ID=${this.realmId}`);
+    logger.info('==============================');
+
+    // Only persist to .env if the file is writable (local dev)
+    try {
+      this.saveTokensToEnv();
+    } catch {
+      logger.info('Could not write to .env — set the above values manually.');
+    }
+
+    return { refreshToken: this.refreshToken!, realmId: this.realmId! };
   }
 
   async forceOAuthFlow() {
@@ -207,8 +238,12 @@ class QuickbooksClient {
     this.ensureInitialized();
 
     if (!this.refreshToken || !this.realmId) {
+      // In HTTP mode, don't spin up a local server — user must visit /auth
+      if (process.env.MCP_TRANSPORT === 'http') {
+        throw new Error('Not authenticated. Visit /auth to connect QuickBooks.');
+      }
       await this.startOAuthFlow();
-      
+
       // Verify we have both tokens after OAuth flow
       if (!this.refreshToken || !this.realmId) {
         throw new Error('Failed to obtain required tokens from OAuth flow');

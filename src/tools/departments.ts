@@ -5,122 +5,53 @@ import {
   updateDepartmentSchema,
   searchDepartmentsSchema,
 } from "../schemas/departments";
-import { quickbooksClient } from "../clients/quickbooksClient";
-import { formatError } from "../utils/errors";
-import { withLogging } from "../utils/withLogging";
+import { qboRequest, type QBQueryResponse } from "../utils/qboRequest";
 import { buildQuickbooksSearchCriteria } from "../utils/search";
+import { executeQbo } from "../utils/executeQbo";
 
 export function registerDepartmentTools(server: FastMCP) {
   // ── create_department ──
-  server.addTool(
-    withLogging({
-      name: "create_department",
-      description: "Create a department in QuickBooks Online.",
-      parameters: createDepartmentSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).createDepartment(args.department, (err: any, entity: any) => {
-              if (err) reject(err);
-              else resolve(entity);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "create_department",
+    description: "Create a department in QuickBooks Online.",
+    parameters: createDepartmentSchema,
+    execute: executeQbo("create_department", (qbo, args) =>
+      qboRequest(cb => qbo.createDepartment(args.department, cb))
+    ),
+  });
 
   // ── get_department ──
-  server.addTool(
-    withLogging({
-      name: "get_department",
-      description: "Get a department by ID from QuickBooks Online.",
-      parameters: getDepartmentSchema,
-      annotations: { readOnlyHint: true },
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).getDepartment(args.id, (err: any, entity: any) => {
-              if (err) reject(err);
-              else resolve(entity);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "get_department",
+    description: "Get a department by ID from QuickBooks Online.",
+    parameters: getDepartmentSchema,
+    annotations: { readOnlyHint: true },
+    execute: executeQbo("get_department", (qbo, args) =>
+      qboRequest(cb => qbo.getDepartment(args.id, cb))
+    ),
+  });
 
   // ── update_department ──
-  server.addTool(
-    withLogging({
-      name: "update_department",
-      description: "Update an existing department in QuickBooks Online.",
-      parameters: updateDepartmentSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).updateDepartment(args.department, (err: any, entity: any) => {
-              if (err) reject(err);
-              else resolve(entity);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "update_department",
+    description: "Update an existing department in QuickBooks Online.",
+    parameters: updateDepartmentSchema,
+    execute: executeQbo("update_department", (qbo, args) =>
+      qboRequest(cb => qbo.updateDepartment(args.department, cb))
+    ),
+  });
 
   // ── search_departments ──
-  server.addTool(
-    withLogging({
-      name: "search_departments",
-      description: "Search departments in QuickBooks Online that match given criteria.",
-      parameters: searchDepartmentsSchema,
-      annotations: { readOnlyHint: true },
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const { criteria = [], ...options } = args;
-          const searchCriteria = buildQuickbooksSearchCriteria({ criteria, ...options });
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).findDepartments(searchCriteria, (err: any, data: any) => {
-              if (err) reject(err);
-              else resolve(
-                data?.QueryResponse?.Department ??
-                data?.QueryResponse?.totalCount ??
-                []
-              );
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "search_departments",
+    description: "Search departments in QuickBooks Online that match given criteria.",
+    parameters: searchDepartmentsSchema,
+    annotations: { readOnlyHint: true },
+    execute: executeQbo("search_departments", async (qbo, args) => {
+      const { criteria = [], ...options } = args;
+      const searchCriteria = buildQuickbooksSearchCriteria({ criteria, ...options });
+      const response = await qboRequest<QBQueryResponse>(cb => qbo.findDepartments(searchCriteria, cb));
+      return response?.QueryResponse?.Department ?? response?.QueryResponse?.totalCount ?? [];
+    }),
+  });
 }

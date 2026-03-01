@@ -6,12 +6,10 @@ import {
   deleteInvoiceSchema,
   searchInvoicesSchema,
 } from "../schemas/invoices";
-import { quickbooksClient } from "../clients/quickbooksClient";
-import { formatError } from "../utils/errors";
-import { withLogging } from "../utils/withLogging";
+import { qboRequest, type QBQueryResponse } from "../utils/qboRequest";
 import { buildQuickbooksSearchCriteria } from "../utils/search";
+import { executeQbo } from "../utils/executeQbo";
 
-// Primitive field type map (based on Quickbooks Invoice entity reference docs)
 const invoiceFieldTypeMap: Record<string, "string" | "number" | "boolean"> = {
   DocNumber: "string",
   TxnDate: "string",
@@ -21,11 +19,8 @@ const invoiceFieldTypeMap: Record<string, "string" | "number" | "boolean"> = {
   TotalAmt: "number",
 };
 
-/**
- * Coerce primitive invoice fields to the expected QuickBooks Online types.
- */
-function normalizeInvoiceFields(obj: Record<string, any>): Record<string, any> {
-  const normalized: Record<string, any> = { ...obj };
+function normalizeInvoiceFields(obj: Record<string, unknown>): Record<string, unknown> {
+  const normalized: Record<string, unknown> = { ...obj };
   for (const [key, value] of Object.entries(obj)) {
     if (value === undefined || value === null) continue;
     const expected = invoiceFieldTypeMap[key];
@@ -47,168 +42,72 @@ function normalizeInvoiceFields(obj: Record<string, any>): Record<string, any> {
 }
 
 export function registerInvoiceTools(server: FastMCP) {
-  // ── create_invoice ───────────────────────────────────────────────────
-  server.addTool(
-    withLogging({
-      name: "create_invoice",
-      description: "Create an invoice in QuickBooks Online.",
-      parameters: createInvoiceSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
+  server.addTool({
+    name: "create_invoice",
+    description: "Create an invoice in QuickBooks Online.",
+    parameters: createInvoiceSchema,
+    execute: executeQbo("create_invoice", (qbo, args) => {
+      const invoicePayload: Record<string, unknown> = {
+        CustomerRef: { value: args.customer_ref },
+        Line: args.line_items.map((l, idx) => ({
+          Id: `${idx + 1}`,
+          LineNum: idx + 1,
+          Description: l.description || undefined,
+          Amount: l.qty * l.unit_price,
+          DetailType: "SalesItemLineDetail",
+          SalesItemLineDetail: {
+            ItemRef: { value: l.item_ref },
+            Qty: l.qty,
+            UnitPrice: l.unit_price,
+          },
+        })),
+        DocNumber: args.doc_number,
+        TxnDate: args.txn_date,
+      };
+      const normalizedPayload = normalizeInvoiceFields(invoicePayload);
+      return qboRequest(cb => qbo.createInvoice(normalizedPayload, cb));
+    }),
+  });
 
-          const invoicePayload: any = {
-            CustomerRef: { value: args.customer_ref },
-            Line: args.line_items.map((l: any, idx: number) => ({
-              Id: `${idx + 1}`,
-              LineNum: idx + 1,
-              Description: l.description || undefined,
-              Amount: l.qty * l.unit_price,
-              DetailType: "SalesItemLineDetail",
-              SalesItemLineDetail: {
-                ItemRef: { value: l.item_ref },
-                Qty: l.qty,
-                UnitPrice: l.unit_price,
-              },
-            })),
-            DocNumber: args.doc_number,
-            TxnDate: args.txn_date,
-          };
+  server.addTool({
+    name: "get_invoice",
+    description: "Get an invoice by ID from QuickBooks Online.",
+    parameters: getInvoiceSchema,
+    annotations: { readOnlyHint: true },
+    execute: executeQbo("get_invoice", (qbo, args) =>
+      qboRequest(cb => qbo.getInvoice(args.invoice_id, cb))
+    ),
+  });
 
-          const normalizedPayload = normalizeInvoiceFields(invoicePayload);
+  server.addTool({
+    name: "update_invoice",
+    description: "Update an existing invoice in QuickBooks Online.",
+    parameters: updateInvoiceSchema,
+    execute: executeQbo("update_invoice", async (qbo, args) => {
+      const existing = await qboRequest<Record<string, unknown>>(cb => qbo.getInvoice(args.invoice_id, cb));
+      const updatePayload = { ...existing, ...args.patch, Id: args.invoice_id, sparse: true };
+      return qboRequest(cb => qbo.updateInvoice(updatePayload, cb));
+    }),
+  });
 
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).createInvoice(normalizedPayload, (err: any, invoice: any) => {
-              if (err) reject(err);
-              else resolve(invoice);
-            });
-          });
+  server.addTool({
+    name: "delete_invoice",
+    description: "Delete an invoice from QuickBooks Online.",
+    parameters: deleteInvoiceSchema,
+    execute: executeQbo("delete_invoice", (qbo, args) =>
+      qboRequest(cb => qbo.deleteInvoice(args.idOrEntity, cb))
+    ),
+  });
 
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
-
-  // ── get_invoice ──────────────────────────────────────────────────────
-  server.addTool(
-    withLogging({
-      name: "get_invoice",
-      description: "Get an invoice by ID from QuickBooks Online.",
-      parameters: getInvoiceSchema,
-      annotations: { readOnlyHint: true },
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).getInvoice(args.invoice_id, (err: any, invoice: any) => {
-              if (err) reject(err);
-              else resolve(invoice);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
-
-  // ── update_invoice ───────────────────────────────────────────────────
-  server.addTool(
-    withLogging({
-      name: "update_invoice",
-      description: "Update an existing invoice in QuickBooks Online.",
-      parameters: updateInvoiceSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          // Fetch existing invoice for SyncToken
-          const existing: any = await new Promise((res, rej) => {
-            (qbo as any).getInvoice(args.invoice_id, (e: any, inv: any) => (e ? rej(e) : res(inv)));
-          });
-
-          const updatePayload = { ...existing, ...args.patch, Id: args.invoice_id, sparse: true };
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).updateInvoice(updatePayload, (err: any, invoice: any) => {
-              if (err) reject(err);
-              else resolve(invoice);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
-
-  // ── delete_invoice ─────────────────────────────────────────────────
-  server.addTool(
-    withLogging({
-      name: "delete_invoice",
-      description: "Delete an invoice from QuickBooks Online.",
-      parameters: deleteInvoiceSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).deleteInvoice(args.idOrEntity, (err: any, invoice: any) => {
-              if (err) reject(err);
-              else resolve(invoice);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
-
-  // ── search_invoices ──────────────────────────────────────────────────
-  server.addTool(
-    withLogging({
-      name: "search_invoices",
-      description: "Search invoices in QuickBooks Online that match given criteria.",
-      parameters: searchInvoicesSchema,
-      annotations: { readOnlyHint: true },
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const searchCriteria = buildQuickbooksSearchCriteria(args.criteria || {});
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).findInvoices(searchCriteria, (err: any, invoices: any) => {
-              if (err) reject(err);
-              else resolve(
-                invoices?.QueryResponse?.Invoice ??
-                invoices?.QueryResponse?.totalCount ??
-                []
-              );
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "search_invoices",
+    description: "Search invoices in QuickBooks Online that match given criteria.",
+    parameters: searchInvoicesSchema,
+    annotations: { readOnlyHint: true },
+    execute: executeQbo("search_invoices", async (qbo, args) => {
+      const searchCriteria = buildQuickbooksSearchCriteria(args.criteria || {});
+      const response = await qboRequest<QBQueryResponse>(cb => qbo.findInvoices(searchCriteria, cb));
+      return response?.QueryResponse?.Invoice ?? response?.QueryResponse?.totalCount ?? [];
+    }),
+  });
 }

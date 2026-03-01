@@ -6,148 +6,63 @@ import {
   deletePurchaseOrderSchema,
   searchPurchaseOrdersSchema,
 } from "../schemas/purchaseOrders";
-import { quickbooksClient } from "../clients/quickbooksClient";
-import { formatError } from "../utils/errors";
-import { withLogging } from "../utils/withLogging";
+import { qboRequest, type QBQueryResponse } from "../utils/qboRequest";
 import { buildQuickbooksSearchCriteria } from "../utils/search";
+import { executeQbo } from "../utils/executeQbo";
 
 export function registerPurchaseOrderTools(server: FastMCP) {
-  // ── create_purchase_order ──
-  server.addTool(
-    withLogging({
-      name: "create_purchase_order",
-      description: "Create a purchase order in QuickBooks Online.",
-      parameters: createPurchaseOrderSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
+  // ── create_purchase_order ────────────────────────────────────────────
+  server.addTool({
+    name: "create_purchase_order",
+    description: "Create a purchase order in QuickBooks Online.",
+    parameters: createPurchaseOrderSchema,
+    execute: executeQbo("create_purchase_order", (qbo, args) =>
+      qboRequest(cb => qbo.createPurchaseOrder(args.purchaseOrder, cb))
+    ),
+  });
 
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).createPurchaseOrder(args.purchaseOrder, (err: any, entity: any) => {
-              if (err) reject(err);
-              else resolve(entity);
-            });
-          });
+  // ── get_purchase_order ───────────────────────────────────────────────
+  server.addTool({
+    name: "get_purchase_order",
+    description: "Get a purchase order by ID from QuickBooks Online.",
+    parameters: getPurchaseOrderSchema,
+    annotations: { readOnlyHint: true },
+    execute: executeQbo("get_purchase_order", (qbo, args) =>
+      qboRequest(cb => qbo.getPurchaseOrder(args.id, cb))
+    ),
+  });
 
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  // ── update_purchase_order ────────────────────────────────────────────
+  server.addTool({
+    name: "update_purchase_order",
+    description: "Update an existing purchase order in QuickBooks Online.",
+    parameters: updatePurchaseOrderSchema,
+    execute: executeQbo("update_purchase_order", (qbo, args) =>
+      qboRequest(cb => qbo.updatePurchaseOrder(args.purchaseOrder, cb))
+    ),
+  });
 
-  // ── get_purchase_order ──
-  server.addTool(
-    withLogging({
-      name: "get_purchase_order",
-      description: "Get a purchase order by ID from QuickBooks Online.",
-      parameters: getPurchaseOrderSchema,
-      annotations: { readOnlyHint: true },
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
+  // ── delete_purchase_order ────────────────────────────────────────────
+  server.addTool({
+    name: "delete_purchase_order",
+    description: "Delete a purchase order from QuickBooks Online.",
+    parameters: deletePurchaseOrderSchema,
+    execute: executeQbo("delete_purchase_order", (qbo, args) =>
+      qboRequest(cb => qbo.deletePurchaseOrder(args.idOrEntity, cb))
+    ),
+  });
 
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).getPurchaseOrder(args.id, (err: any, entity: any) => {
-              if (err) reject(err);
-              else resolve(entity);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
-
-  // ── update_purchase_order ──
-  server.addTool(
-    withLogging({
-      name: "update_purchase_order",
-      description: "Update an existing purchase order in QuickBooks Online.",
-      parameters: updatePurchaseOrderSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).updatePurchaseOrder(args.purchaseOrder, (err: any, entity: any) => {
-              if (err) reject(err);
-              else resolve(entity);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
-
-  // ── delete_purchase_order ──
-  server.addTool(
-    withLogging({
-      name: "delete_purchase_order",
-      description: "Delete a purchase order from QuickBooks Online.",
-      parameters: deletePurchaseOrderSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).deletePurchaseOrder(args.idOrEntity, (err: any, entity: any) => {
-              if (err) reject(err);
-              else resolve(entity);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
-
-  // ── search_purchase_orders ──
-  server.addTool(
-    withLogging({
-      name: "search_purchase_orders",
-      description: "Search purchase orders in QuickBooks Online that match given criteria.",
-      parameters: searchPurchaseOrdersSchema,
-      annotations: { readOnlyHint: true },
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const { criteria = [], ...options } = args;
-          const searchCriteria = buildQuickbooksSearchCriteria({ criteria, ...options });
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).findPurchaseOrders(searchCriteria, (err: any, data: any) => {
-              if (err) reject(err);
-              else resolve(
-                data?.QueryResponse?.PurchaseOrder ??
-                data?.QueryResponse?.totalCount ??
-                []
-              );
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  // ── search_purchase_orders ───────────────────────────────────────────
+  server.addTool({
+    name: "search_purchase_orders",
+    description: "Search purchase orders in QuickBooks Online that match given criteria.",
+    parameters: searchPurchaseOrdersSchema,
+    annotations: { readOnlyHint: true },
+    execute: executeQbo("search_purchase_orders", async (qbo, args) => {
+      const { criteria = [], ...options } = args;
+      const searchCriteria = buildQuickbooksSearchCriteria({ criteria, ...options });
+      const response = await qboRequest<QBQueryResponse>(cb => qbo.findPurchaseOrders(searchCriteria, cb));
+      return response?.QueryResponse?.PurchaseOrder ?? response?.QueryResponse?.totalCount ?? [];
+    }),
+  });
 }

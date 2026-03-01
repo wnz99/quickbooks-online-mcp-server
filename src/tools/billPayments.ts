@@ -6,148 +6,63 @@ import {
   deleteBillPaymentSchema,
   searchBillPaymentsSchema,
 } from "../schemas/billPayments";
-import { quickbooksClient } from "../clients/quickbooksClient";
-import { formatError } from "../utils/errors";
-import { withLogging } from "../utils/withLogging";
+import { qboRequest, type QBQueryResponse } from "../utils/qboRequest";
 import { buildQuickbooksSearchCriteria } from "../utils/search";
+import { executeQbo } from "../utils/executeQbo";
 
 export function registerBillPaymentTools(server: FastMCP) {
   // ── create_bill_payment ──────────────────────────────────────────────
-  server.addTool(
-    withLogging({
-      name: "create_bill_payment",
-      description: "Create a bill payment in QuickBooks Online.",
-      parameters: createBillPaymentSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            qbo.createBillPayment(args.billPayment, (err: any, payment: any) => {
-              if (err) reject(err);
-              else resolve(payment);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "create_bill_payment",
+    description: "Create a bill payment in QuickBooks Online.",
+    parameters: createBillPaymentSchema,
+    execute: executeQbo("create_bill_payment", (qbo, args) =>
+      qboRequest(cb => qbo.createBillPayment(args.billPayment, cb))
+    ),
+  });
 
   // ── get_bill_payment ─────────────────────────────────────────────────
-  server.addTool(
-    withLogging({
-      name: "get_bill_payment",
-      description: "Get a bill payment by ID from QuickBooks Online.",
-      parameters: getBillPaymentSchema,
-      annotations: { readOnlyHint: true },
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            qbo.getBillPayment(args.id, (err: any, payment: any) => {
-              if (err) reject(err);
-              else resolve(payment);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "get_bill_payment",
+    description: "Get a bill payment by ID from QuickBooks Online.",
+    parameters: getBillPaymentSchema,
+    annotations: { readOnlyHint: true },
+    execute: executeQbo("get_bill_payment", (qbo, args) =>
+      qboRequest(cb => qbo.getBillPayment(args.id, cb))
+    ),
+  });
 
   // ── update_bill_payment ──────────────────────────────────────────────
-  server.addTool(
-    withLogging({
-      name: "update_bill_payment",
-      description: "Update an existing bill payment in QuickBooks Online.",
-      parameters: updateBillPaymentSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            qbo.updateBillPayment(args.billPayment, (err: any, payment: any) => {
-              if (err) reject(err);
-              else resolve(payment);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "update_bill_payment",
+    description: "Update an existing bill payment in QuickBooks Online.",
+    parameters: updateBillPaymentSchema,
+    execute: executeQbo("update_bill_payment", (qbo, args) =>
+      qboRequest(cb => qbo.updateBillPayment(args.billPayment, cb))
+    ),
+  });
 
   // ── delete_bill_payment ──────────────────────────────────────────────
-  server.addTool(
-    withLogging({
-      name: "delete_bill_payment",
-      description: "Delete a bill payment from QuickBooks Online.",
-      parameters: deleteBillPaymentSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            qbo.deleteBillPayment(args.idOrEntity, (err: any, payment: any) => {
-              if (err) reject(err);
-              else resolve(payment);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "delete_bill_payment",
+    description: "Delete a bill payment from QuickBooks Online.",
+    parameters: deleteBillPaymentSchema,
+    execute: executeQbo("delete_bill_payment", (qbo, args) =>
+      qboRequest(cb => qbo.deleteBillPayment(args.idOrEntity, cb))
+    ),
+  });
 
   // ── search_bill_payments ─────────────────────────────────────────────
-  server.addTool(
-    withLogging({
-      name: "search_bill_payments",
-      description: "Search bill payments in QuickBooks Online that match given criteria.",
-      parameters: searchBillPaymentsSchema,
-      annotations: { readOnlyHint: true },
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const { criteria = [], ...options } = args;
-          const searchCriteria = buildQuickbooksSearchCriteria({ criteria, ...options });
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).findBillPayments(searchCriteria, (err: any, payments: any) => {
-              if (err) reject(err);
-              else resolve(
-                payments?.QueryResponse?.BillPayment ??
-                payments?.QueryResponse?.totalCount ??
-                []
-              );
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "search_bill_payments",
+    description: "Search bill payments in QuickBooks Online that match given criteria.",
+    parameters: searchBillPaymentsSchema,
+    annotations: { readOnlyHint: true },
+    execute: executeQbo("search_bill_payments", async (qbo, args) => {
+      const { criteria = [], ...options } = args;
+      const searchCriteria = buildQuickbooksSearchCriteria({ criteria, ...options });
+      const response = await qboRequest<QBQueryResponse>(cb => qbo.findBillPayments(searchCriteria, cb));
+      return response?.QueryResponse?.BillPayment ?? response?.QueryResponse?.totalCount ?? [];
+    }),
+  });
 }

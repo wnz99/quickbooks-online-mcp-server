@@ -6,148 +6,63 @@ import {
   deleteSalesReceiptSchema,
   searchSalesReceiptsSchema,
 } from "../schemas/salesReceipts";
-import { quickbooksClient } from "../clients/quickbooksClient";
-import { formatError } from "../utils/errors";
-import { withLogging } from "../utils/withLogging";
+import { qboRequest, type QBQueryResponse } from "../utils/qboRequest";
 import { buildQuickbooksSearchCriteria } from "../utils/search";
+import { executeQbo } from "../utils/executeQbo";
 
 export function registerSalesReceiptTools(server: FastMCP) {
   // ── create_sales_receipt ──
-  server.addTool(
-    withLogging({
-      name: "create_sales_receipt",
-      description: "Create a sales receipt in QuickBooks Online.",
-      parameters: createSalesReceiptSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).createSalesReceipt(args.salesReceipt, (err: any, entity: any) => {
-              if (err) reject(err);
-              else resolve(entity);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "create_sales_receipt",
+    description: "Create a sales receipt in QuickBooks Online.",
+    parameters: createSalesReceiptSchema,
+    execute: executeQbo("create_sales_receipt", (qbo, args) =>
+      qboRequest(cb => qbo.createSalesReceipt(args.salesReceipt, cb))
+    ),
+  });
 
   // ── get_sales_receipt ──
-  server.addTool(
-    withLogging({
-      name: "get_sales_receipt",
-      description: "Get a sales receipt by ID from QuickBooks Online.",
-      parameters: getSalesReceiptSchema,
-      annotations: { readOnlyHint: true },
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).getSalesReceipt(args.id, (err: any, entity: any) => {
-              if (err) reject(err);
-              else resolve(entity);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "get_sales_receipt",
+    description: "Get a sales receipt by ID from QuickBooks Online.",
+    parameters: getSalesReceiptSchema,
+    annotations: { readOnlyHint: true },
+    execute: executeQbo("get_sales_receipt", (qbo, args) =>
+      qboRequest(cb => qbo.getSalesReceipt(args.id, cb))
+    ),
+  });
 
   // ── update_sales_receipt ──
-  server.addTool(
-    withLogging({
-      name: "update_sales_receipt",
-      description: "Update an existing sales receipt in QuickBooks Online.",
-      parameters: updateSalesReceiptSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).updateSalesReceipt(args.salesReceipt, (err: any, entity: any) => {
-              if (err) reject(err);
-              else resolve(entity);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "update_sales_receipt",
+    description: "Update an existing sales receipt in QuickBooks Online.",
+    parameters: updateSalesReceiptSchema,
+    execute: executeQbo("update_sales_receipt", (qbo, args) =>
+      qboRequest(cb => qbo.updateSalesReceipt(args.salesReceipt, cb))
+    ),
+  });
 
   // ── delete_sales_receipt ──
-  server.addTool(
-    withLogging({
-      name: "delete_sales_receipt",
-      description: "Delete a sales receipt from QuickBooks Online.",
-      parameters: deleteSalesReceiptSchema,
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).deleteSalesReceipt(args.idOrEntity, (err: any, entity: any) => {
-              if (err) reject(err);
-              else resolve(entity);
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "delete_sales_receipt",
+    description: "Delete a sales receipt from QuickBooks Online.",
+    parameters: deleteSalesReceiptSchema,
+    execute: executeQbo("delete_sales_receipt", (qbo, args) =>
+      qboRequest(cb => qbo.deleteSalesReceipt(args.idOrEntity, cb))
+    ),
+  });
 
   // ── search_sales_receipts ──
-  server.addTool(
-    withLogging({
-      name: "search_sales_receipts",
-      description: "Search sales receipts in QuickBooks Online that match given criteria.",
-      parameters: searchSalesReceiptsSchema,
-      annotations: { readOnlyHint: true },
-      execute: async (args: any) => {
-        try {
-          await quickbooksClient.authenticate();
-          const qbo = quickbooksClient.getQuickbooks();
-
-          const { criteria = [], ...options } = args;
-          const searchCriteria = buildQuickbooksSearchCriteria({ criteria, ...options });
-
-          const result = await new Promise((resolve, reject) => {
-            (qbo as any).findSalesReceipts(searchCriteria, (err: any, data: any) => {
-              if (err) reject(err);
-              else resolve(
-                data?.QueryResponse?.SalesReceipt ??
-                data?.QueryResponse?.totalCount ??
-                []
-              );
-            });
-          });
-
-          return JSON.stringify({ success: true, result });
-        } catch (error) {
-          return JSON.stringify({ success: false, error: formatError(error) });
-        }
-      },
-    })
-  );
+  server.addTool({
+    name: "search_sales_receipts",
+    description: "Search sales receipts in QuickBooks Online that match given criteria.",
+    parameters: searchSalesReceiptsSchema,
+    annotations: { readOnlyHint: true },
+    execute: executeQbo("search_sales_receipts", async (qbo, args) => {
+      const { criteria = [], ...options } = args;
+      const searchCriteria = buildQuickbooksSearchCriteria({ criteria, ...options });
+      const response = await qboRequest<QBQueryResponse>(cb => qbo.findSalesReceipts(searchCriteria, cb));
+      return response?.QueryResponse?.SalesReceipt ?? response?.QueryResponse?.totalCount ?? [];
+    }),
+  });
 }

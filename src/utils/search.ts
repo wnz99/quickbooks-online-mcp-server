@@ -1,6 +1,6 @@
 export interface QuickbooksFilter {
   field: string;
-  value: any;
+  value: unknown;
   operator?: string;
 }
 
@@ -15,15 +15,15 @@ export interface AdvancedQuickbooksSearchOptions {
 }
 
 export type QuickbooksSearchCriteriaInput =
-  | Record<string, any>
-  | Array<Record<string, any>>
+  | Record<string, unknown>
+  | Array<Record<string, unknown>>
   | AdvancedQuickbooksSearchOptions;
 
 export function buildQuickbooksSearchCriteria(
   input: QuickbooksSearchCriteriaInput
-): Record<string, any> | Array<Record<string, any>> {
+): Record<string, unknown> | Array<Record<string, unknown>> {
   if (Array.isArray(input)) {
-    return input as Array<Record<string, any>>;
+    return input;
   }
 
   const possibleAdvancedKeys: (keyof AdvancedQuickbooksSearchOptions)[] = [
@@ -42,11 +42,11 @@ export function buildQuickbooksSearchCriteria(
   );
 
   if (!isAdvanced) {
-    return input as Record<string, any>;
+    return input as Record<string, unknown>;
   }
 
   const options = input as AdvancedQuickbooksSearchOptions;
-  const criteriaArr: Array<Record<string, any>> = [];
+  const criteriaArr: Array<Record<string, unknown>> = [];
 
   options.filters?.forEach((f) => {
     criteriaArr.push({ field: f.field, value: f.value, operator: f.operator });
