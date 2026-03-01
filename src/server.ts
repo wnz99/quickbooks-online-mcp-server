@@ -46,6 +46,8 @@ import { quickbooksClient } from "./clients/quickbooksClient";
 export function createServer(config: ServerConfig) {
   if (config.logLevel) setLogLevel(config.logLevel);
 
+  const apiKey = process.env.MCP_API_KEY;
+
   const server = new FastMCP({
     name: "quickbooks-online",
     version: "1.0.0",
@@ -81,6 +83,15 @@ Use the \`get_report\` tool with a report type (e.g., BalanceSheet, ProfitAndLos
       path: "/health",
       status: 200,
     },
+    authenticate: apiKey
+      ? async (request) => {
+          const auth = request.headers.authorization;
+          if (auth !== `Bearer ${apiKey}`) {
+            throw new Response(null, { status: 401, statusText: "Unauthorized" });
+          }
+          return { id: "owner" };
+        }
+      : undefined,
   });
 
   // Register all entity tools
