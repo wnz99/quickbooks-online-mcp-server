@@ -4,9 +4,10 @@ import { quickbooksClient } from "./clients/quickbooksClient";
 import { logger } from "./utils/logger";
 
 logger.info("Starting QuickBooks OAuth authentication flow...");
+logger.info("Your browser will open for authorization.");
 
 quickbooksClient
-  .authenticate()
+  .forceOAuthFlow()
   .then(() => {
     logger.info("Authentication successful. Tokens saved to .env");
     process.exit(0);

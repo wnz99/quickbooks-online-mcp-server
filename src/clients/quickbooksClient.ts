@@ -196,6 +196,13 @@ class QuickbooksClient {
     }
   }
 
+  async forceOAuthFlow() {
+    this.ensureInitialized();
+    this.refreshToken = undefined;
+    this.realmId = undefined;
+    await this.startOAuthFlow();
+  }
+
   async authenticate() {
     this.ensureInitialized();
 

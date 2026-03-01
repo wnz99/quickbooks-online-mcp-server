@@ -17,7 +17,12 @@ function logToStderr(level: LogLevel, message: string, data?: unknown): void {
   const timestamp = new Date().toISOString();
   const prefix = `[${timestamp}] [MCP] [${level.toUpperCase()}]`;
   if (data !== undefined) {
-    const dataStr = typeof data === "object" ? JSON.stringify(data, null, 2) : String(data);
+    const dataStr =
+      data instanceof Error
+        ? `${data.message}${data.stack ? "\n" + data.stack : ""}`
+        : typeof data === "object"
+          ? JSON.stringify(data, null, 2)
+          : String(data);
     console.error(`${prefix} ${message}\n${dataStr}`);
   } else {
     console.error(`${prefix} ${message}`);
