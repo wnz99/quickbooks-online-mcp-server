@@ -11,51 +11,42 @@ import { logger } from "../utils/logger";
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const client_id = process.env.QUICKBOOKS_CLIENT_ID;
-const client_secret = process.env.QUICKBOOKS_CLIENT_SECRET;
-const refresh_token = process.env.QUICKBOOKS_REFRESH_TOKEN;
-const realm_id = process.env.QUICKBOOKS_REALM_ID;
-const environment = process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox';
-const redirect_uri = 'http://localhost:8000/callback';
-
-// Only throw error if client_id or client_secret is missing
-if (!client_id || !client_secret || !redirect_uri) {
-  throw Error("Client ID, Client Secret and Redirect URI must be set in environment variables");
-}
 
 class QuickbooksClient {
-  private readonly clientId: string;
-  private readonly clientSecret: string;
+  private clientId?: string;
+  private clientSecret?: string;
   private refreshToken?: string;
   private realmId?: string;
-  private readonly environment: string;
+  private environment: string = 'sandbox';
   private accessToken?: string;
   private accessTokenExpiry?: Date;
   private quickbooksInstance?: QuickBooks;
-  private oauthClient: OAuthClient;
+  private oauthClient?: OAuthClient;
   private isAuthenticating: boolean = false;
-  private redirectUri: string;
+  private redirectUri: string = 'http://localhost:8000/callback';
+  private initialized: boolean = false;
 
-  constructor(config: {
-    clientId: string;
-    clientSecret: string;
-    refreshToken?: string;
-    realmId?: string;
-    environment: string;
-    redirectUri: string;
-  }) {
-    this.clientId = config.clientId;
-    this.clientSecret = config.clientSecret;
-    this.refreshToken = config.refreshToken;
-    this.realmId = config.realmId;
-    this.environment = config.environment;
-    this.redirectUri = config.redirectUri;
+  private ensureInitialized(): void {
+    if (this.initialized) return;
+
+    this.clientId = process.env.QUICKBOOKS_CLIENT_ID;
+    this.clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
+    this.refreshToken = process.env.QUICKBOOKS_REFRESH_TOKEN;
+    this.realmId = process.env.QUICKBOOKS_REALM_ID;
+    this.environment = process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox';
+
+    if (!this.clientId || !this.clientSecret) {
+      throw new Error("QUICKBOOKS_CLIENT_ID and QUICKBOOKS_CLIENT_SECRET must be set in environment variables");
+    }
+
     this.oauthClient = new OAuthClient({
       clientId: this.clientId,
       clientSecret: this.clientSecret,
       environment: this.environment,
       redirectUri: this.redirectUri,
     });
+
+    this.initialized = true;
   }
 
   private async startOAuthFlow(): Promise<void> {
@@ -63,6 +54,7 @@ class QuickbooksClient {
       return;
     }
 
+    this.ensureInitialized();
     this.isAuthenticating = true;
     const port = 8000;
 
@@ -71,7 +63,7 @@ class QuickbooksClient {
       const server = http.createServer(async (req, res) => {
         if (req.url?.startsWith('/callback')) {
           try {
-            const response = await this.oauthClient.createToken(req.url);
+            const response = await this.oauthClient!.createToken(req.url);
             const tokens = response.token;
             
             // Save tokens
@@ -135,7 +127,7 @@ class QuickbooksClient {
       server.listen(port, async () => {
         
         // Generate authorization URL with proper type assertion
-        const authUri = this.oauthClient.authorizeUri({
+        const authUri = this.oauthClient!.authorizeUri({
           scope: [OAuthClient.scopes.Accounting as string],
           state: 'testState'
         }).toString();
@@ -174,9 +166,11 @@ class QuickbooksClient {
   }
 
   async refreshAccessToken() {
+    this.ensureInitialized();
+
     if (!this.refreshToken) {
       await this.startOAuthFlow();
-      
+
       // Verify we have a refresh token after OAuth flow
       if (!this.refreshToken) {
         throw new Error('Failed to obtain refresh token from OAuth flow');
@@ -185,7 +179,7 @@ class QuickbooksClient {
 
     try {
       // At this point we know refreshToken is not undefined
-      const authResponse = await this.oauthClient.refreshUsingToken(this.refreshToken);
+      const authResponse = await this.oauthClient!.refreshUsingToken(this.refreshToken);
       
       this.accessToken = authResponse.token.access_token;
       
@@ -203,6 +197,8 @@ class QuickbooksClient {
   }
 
   async authenticate() {
+    this.ensureInitialized();
+
     if (!this.refreshToken || !this.realmId) {
       await this.startOAuthFlow();
       
@@ -221,8 +217,8 @@ class QuickbooksClient {
     
     // At this point we know all tokens are available
     this.quickbooksInstance = new QuickBooks(
-      this.clientId,
-      this.clientSecret,
+      this.clientId!,
+      this.clientSecret!,
       this.accessToken,
       false, // no token secret for OAuth 2.0
       this.realmId!, // Safe to use ! here as we checked above
@@ -244,11 +240,4 @@ class QuickbooksClient {
   }
 }
 
-export const quickbooksClient = new QuickbooksClient({
-  clientId: client_id,
-  clientSecret: client_secret,
-  refreshToken: refresh_token,
-  realmId: realm_id,
-  environment: environment,
-  redirectUri: redirect_uri,
-});
+export const quickbooksClient = new QuickbooksClient();
