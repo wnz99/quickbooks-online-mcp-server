@@ -12,16 +12,17 @@ export function executeQbo<TArgs>(
   operation: (qbo: QuickBooks, args: TArgs) => Promise<unknown>
 ) {
   return async (args: TArgs): Promise<string> => {
-    logger.debug(`[tool:${toolName}] CALL`, { args });
+    logger.info(`[tool:${toolName}] CALL`, JSON.stringify(args));
     try {
       await quickbooksClient.authenticate();
       const qbo = quickbooksClient.getQuickbooks();
       const result = await operation(qbo, args);
-      logger.debug(`[tool:${toolName}] OK`);
+      logger.info(`[tool:${toolName}] OK`, JSON.stringify(result));
       return JSON.stringify({ success: true, result });
     } catch (error: unknown) {
-      logger.error(`[tool:${toolName}] ERROR`, { error: formatError(error) });
-      return JSON.stringify({ success: false, error: formatError(error) });
+      const formatted = formatError(error);
+      logger.error(`[tool:${toolName}] ERROR`, JSON.stringify({ error: formatted, rawError: error }));
+      return JSON.stringify({ success: false, error: formatted });
     }
   };
 }
