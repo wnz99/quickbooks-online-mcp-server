@@ -1,0 +1,11 @@
+services:
+  qbo-mcp:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - MCP_TRANSPORT=http
+      - MCP_PORT=3000
+      - MCP_LOG_LEVEL=info
