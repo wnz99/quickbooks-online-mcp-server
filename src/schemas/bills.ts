@@ -17,6 +17,8 @@ export const createBillSchema = z.object({
     DueDate: z.string().optional().describe("Due date (YYYY-MM-DD)"),
     TxnDate: z.string().optional().describe("Transaction date (YYYY-MM-DD)"),
     CurrencyRef: currencyRefSchema.optional().describe("Currency for this bill (defaults to company home currency)"),
+    ExchangeRate: z.number().optional().describe("Exchange rate for foreign currency bills"),
+    APAccountRef: entityRefSchema.optional().describe("Accounts Payable account reference (required for multi-currency bills)"),
   }).describe("Bill data"),
 });
 
@@ -33,6 +35,8 @@ export const updateBillSchema = z.object({
     DueDate: z.string().optional().describe("Due date (YYYY-MM-DD)"),
     TxnDate: z.string().optional().describe("Transaction date (YYYY-MM-DD)"),
     CurrencyRef: currencyRefSchema.optional().describe("Currency for this bill"),
+    ExchangeRate: z.number().optional().describe("Exchange rate for foreign currency bills"),
+    APAccountRef: entityRefSchema.optional().describe("Accounts Payable account reference"),
   }).describe("Bill data with Id and SyncToken for update"),
 });
 
