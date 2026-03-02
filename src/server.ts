@@ -73,7 +73,7 @@ Use the \`get_report\` tool with a report type (e.g., BalanceSheet, ProfitAndLos
 
 ## Multi-Currency
 
-This is a multi-currency company (home currency: GBP). When creating vendors, customers, accounts, or transactions, always ask the user which currency to use if not specified. Pass the ISO 4217 code via CurrencyRef (e.g. \`{ "value": "USD" }\`). Currency cannot be changed after creation.
+Before creating entities, call \`get_preferences\` and check \`CurrencyPrefs.MultiCurrencyEnabled\`. If enabled, always ask the user which currency to use when creating vendors, customers, accounts, or transactions (unless already specified). Pass the ISO 4217 code via CurrencyRef (e.g. \`{ "value": "USD" }\`). Currency cannot be changed after creation.
 
 ## Tips
 
