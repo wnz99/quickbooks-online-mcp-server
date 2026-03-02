@@ -75,6 +75,11 @@ Use the \`get_report\` tool with a report type (e.g., BalanceSheet, ProfitAndLos
 
 Before creating entities, call \`get_preferences\` and check \`CurrencyPrefs.MultiCurrencyEnabled\`. If enabled, always ask the user which currency to use when creating vendors, customers, accounts, or transactions (unless already specified). Pass the ISO 4217 code via CurrencyRef (e.g. \`{ "value": "USD" }\`). Currency cannot be changed after creation.
 
+When creating foreign currency transactions (bills, invoices, etc.), an exchange rate may be needed. Ask the user how to handle it:
+1. **Auto-fetch**: Use \`fetch_exchange_rate\` to get the live ECB rate from Frankfurter
+2. **User-provided**: The user supplies the rate manually
+3. **Omit**: Let QuickBooks use its own stored rate
+
 ## Tips
 
 - Use search tools to find entity IDs before updating or deleting
