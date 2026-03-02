@@ -45,10 +45,10 @@ export function registerVendorTools(server: FastMCP) {
   // ── delete_vendor ────────────────────────────────────────────────────
   server.addTool({
     name: "delete_vendor",
-    description: "Delete a vendor from QuickBooks Online.",
+    description: "Deactivate a vendor in QuickBooks Online (vendors cannot be hard-deleted).",
     parameters: deleteVendorSchema,
     execute: executeQbo("delete_vendor", (qbo, args) =>
-      qboRequest(cb => qbo.deleteVendor(args.vendor, cb))
+      qboRequest(cb => qbo.updateVendor({ ...args.vendor, Active: false }, cb))
     ),
   });
 

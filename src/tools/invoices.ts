@@ -63,6 +63,7 @@ export function registerInvoiceTools(server: FastMCP) {
         })),
         DocNumber: args.doc_number,
         TxnDate: args.txn_date,
+        CurrencyRef: args.currency_ref,
       };
       const normalizedPayload = normalizeInvoiceFields(invoicePayload);
       return qboRequest(cb => qbo.createInvoice(normalizedPayload, cb));

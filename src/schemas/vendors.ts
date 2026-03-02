@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { addressSchema, paginationSchema } from "./shared";
+import { addressSchema, currencyRefSchema, paginationSchema } from "./shared";
 
 export const createVendorSchema = z.object({
   vendor: z.object({
@@ -7,6 +7,7 @@ export const createVendorSchema = z.object({
     GivenName: z.string().optional().describe("First name"),
     FamilyName: z.string().optional().describe("Last name"),
     CompanyName: z.string().optional().describe("Company name"),
+    CurrencyRef: currencyRefSchema.optional().describe("Currency for this vendor (defaults to company home currency)"),
     PrimaryEmailAddr: z.object({
       Address: z.string().optional().describe("Email address"),
     }).optional().describe("Primary email"),
@@ -29,6 +30,7 @@ export const updateVendorSchema = z.object({
     GivenName: z.string().optional().describe("First name"),
     FamilyName: z.string().optional().describe("Last name"),
     CompanyName: z.string().optional().describe("Company name"),
+    CurrencyRef: currencyRefSchema.optional().describe("Currency for this vendor"),
     PrimaryEmailAddr: z.object({
       Address: z.string().optional().describe("Email address"),
     }).optional().describe("Primary email"),

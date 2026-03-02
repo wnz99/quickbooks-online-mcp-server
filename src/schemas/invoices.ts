@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { currencyRefSchema } from "./shared";
 
 const invoiceLineItemSchema = z.object({
   item_ref: z.string().min(1).describe("Item ID reference"),
@@ -12,6 +13,7 @@ export const createInvoiceSchema = z.object({
   line_items: z.array(invoiceLineItemSchema).min(1).describe("Line items for the invoice"),
   doc_number: z.string().optional().describe("Custom document number"),
   txn_date: z.string().optional().describe("Transaction date (YYYY-MM-DD)"),
+  currency_ref: currencyRefSchema.optional().describe("Currency for this invoice (defaults to company home currency)"),
 }).describe("Create a new invoice");
 
 export const getInvoiceSchema = z.object({

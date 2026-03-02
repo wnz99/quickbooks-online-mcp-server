@@ -22,6 +22,11 @@ export const entityRefSchema = z.object({
   name: z.string().optional().describe("Entity display name"),
 }).describe("Reference to another QuickBooks entity");
 
+export const currencyRefSchema = z.object({
+  value: z.string().describe("ISO 4217 currency code (e.g. USD, GBP, EUR)"),
+  name: z.string().optional().describe("Currency display name"),
+}).describe("Currency reference — defaults to company home currency if omitted");
+
 export const addressSchema = z.object({
   Line1: z.string().optional().describe("Street address line 1"),
   City: z.string().optional().describe("City"),

@@ -41,60 +41,19 @@ export function registerCustomerTools(server: FastMCP) {
 
   server.addTool({
     name: "delete_customer",
-    description: "Delete (or deactivate) a customer in QuickBooks Online.",
+    description: "Deactivate a customer in QuickBooks Online (customers cannot be hard-deleted).",
     parameters: deleteCustomerSchema,
-    execute: executeQbo("delete_customer", (qbo, args) => {
+    execute: executeQbo("delete_customer", async (qbo, args) => {
       const idOrEntity = args.idOrEntity;
-      const hasDelete = typeof qbo.deleteCustomer === "function";
+      const customer = typeof idOrEntity === "object" && idOrEntity?.Id
+        ? idOrEntity as Record<string, unknown>
+        : await qboRequest<Record<string, unknown>>(cb => qbo.getCustomer(String(idOrEntity), cb));
 
-      return new Promise((resolve, reject) => {
-        if (hasDelete) {
-          qbo.deleteCustomer(idOrEntity, (err, response, res) => {
-            if (err) {
-              if (res?.headers?.["intuit_tid"] && typeof err === "object" && err !== null) {
-                (err as Record<string, unknown>).intuit_tid = res.headers["intuit_tid"];
-              }
-              fallbackInactive(resolve, reject, err);
-            } else {
-              resolve(response);
-            }
-          });
-        } else {
-          fallbackInactive(resolve, reject);
-        }
-
-        function fallbackInactive(
-          res: (value: unknown) => void,
-          rej: (reason?: unknown) => void,
-          originalError?: unknown
-        ) {
-          const getEntity = (cb: (cust: Record<string, unknown> | null) => void) => {
-            if (typeof idOrEntity === "object" && idOrEntity?.Id) {
-              cb(idOrEntity as Record<string, unknown>);
-            } else {
-              qbo.getCustomer(idOrEntity, (_e, cust) => cb(cust as Record<string, unknown> | null));
-            }
-          };
-
-          getEntity((customerEntity) => {
-            if (!customerEntity || !customerEntity.Id) {
-              rej(originalError || new Error("Unable to retrieve customer for inactive update"));
-              return;
-            }
-
-            const inactiveEntity = {
-              Id: customerEntity.Id,
-              SyncToken: customerEntity.SyncToken,
-              Active: false,
-            };
-
-            qbo.updateCustomer(inactiveEntity, (err, resp) => {
-              if (err) rej(err);
-              else res(resp);
-            });
-          });
-        }
-      });
+      return qboRequest(cb => qbo.updateCustomer({
+        Id: customer.Id,
+        SyncToken: customer.SyncToken,
+        Active: false,
+      }, cb));
     }),
   });
 

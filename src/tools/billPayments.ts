@@ -43,13 +43,25 @@ export function registerBillPaymentTools(server: FastMCP) {
   });
 
   // ── delete_bill_payment ──────────────────────────────────────────────
+  // Bill payments cannot be deleted via the QBO API. They can be voided
+  // by updating them. This tool fetches the payment and sets it to void.
   server.addTool({
     name: "delete_bill_payment",
-    description: "Delete a bill payment from QuickBooks Online.",
+    description: "Void a bill payment in QuickBooks Online (bill payments cannot be hard-deleted).",
     parameters: deleteBillPaymentSchema,
-    execute: executeQbo("delete_bill_payment", (qbo, args) =>
-      qboRequest(cb => qbo.deleteBillPayment(args.idOrEntity, cb))
-    ),
+    execute: executeQbo("delete_bill_payment", async (qbo, args) => {
+      const id = typeof args.idOrEntity === "object" && args.idOrEntity?.Id
+        ? args.idOrEntity.Id
+        : String(args.idOrEntity);
+      const existing = await qboRequest<Record<string, unknown>>(cb => qbo.getBillPayment(id, cb));
+      return qboRequest(cb => qbo.updateBillPayment({
+        ...existing,
+        sparse: true,
+        PrivateNote: "Voided",
+        TotalAmt: 0,
+        Line: [],
+      }, cb));
+    }),
   });
 
   // ── search_bill_payments ─────────────────────────────────────────────

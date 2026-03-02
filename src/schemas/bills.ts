@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { entityRefSchema, paginationSchema } from "./shared";
+import { currencyRefSchema, entityRefSchema, paginationSchema } from "./shared";
 
 const billLineSchema = z.object({
   Amount: z.number().describe("Line amount"),
@@ -15,6 +15,7 @@ export const createBillSchema = z.object({
     DueDate: z.string().describe("Due date (YYYY-MM-DD)"),
     Balance: z.number().describe("Balance amount"),
     TotalAmt: z.number().describe("Total amount"),
+    CurrencyRef: currencyRefSchema.optional().describe("Currency for this bill (defaults to company home currency)"),
   }).describe("Bill data"),
 });
 
@@ -30,6 +31,7 @@ export const updateBillSchema = z.object({
     DueDate: z.string().describe("Due date"),
     Balance: z.number().describe("Balance amount"),
     TotalAmt: z.number().describe("Total amount"),
+    CurrencyRef: currencyRefSchema.optional().describe("Currency for this bill"),
   }).describe("Bill data with Id for update"),
 });
 

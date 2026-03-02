@@ -66,6 +66,7 @@ export function registerAccountTools(server: FastMCP) {
         AccountType: args.type,
         AccountSubType: args.sub_type,
         Description: args.description,
+        CurrencyRef: args.currency_ref,
       };
       const payload = normalizeAccountPayload(basePayload);
       return qboRequest(cb => qbo.createAccount(payload, cb));
