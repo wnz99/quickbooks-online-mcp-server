@@ -174,7 +174,7 @@ export async function startServer(config: ServerConfig) {
       transportType: "httpStream",
       httpStream: {
         endpoint: "/mcp",
-        stateless: true,
+        stateless: false,
         host: "0.0.0.0",
         port,
       },
