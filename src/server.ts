@@ -71,11 +71,16 @@ Search tools accept criteria with field-level filtering:
 
 Use the \`get_report\` tool with a report type (e.g., BalanceSheet, ProfitAndLoss, CashFlow, TrialBalance).
 
+## Multi-Currency
+
+This is a multi-currency company (home currency: GBP). When creating vendors, customers, accounts, or transactions, always ask the user which currency to use if not specified. Pass the ISO 4217 code via CurrencyRef (e.g. \`{ "value": "USD" }\`). Currency cannot be changed after creation.
+
 ## Tips
 
 - Use search tools to find entity IDs before updating or deleting
 - Updates require the entity's current SyncToken (get it via the get tool first)
 - Some deletes are soft-deletes (mark inactive) rather than hard deletes
+- Deleting vendors or customers deactivates them (QBO does not support hard-delete for these)
     `.trim(),
     health: {
       message: "QuickBooks MCP Server is healthy",
