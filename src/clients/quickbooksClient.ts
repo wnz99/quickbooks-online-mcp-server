@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import open from 'open';
 import { randomBytes } from 'crypto';
 import { logger } from "../utils/logger";
+import type { ReportName } from '../schemas/reports';
 
 dotenv.config();
 
@@ -312,6 +313,30 @@ export class QuickbooksClient {
       throw new Error('Quickbooks not authenticated. Call authenticate() first');
     }
     return this.quickbooksInstance;
+  }
+
+  /** Use documented report endpoints; community SDK aliases include retired routes. */
+  async getReport(reportName: ReportName, params: Record<string, unknown> = {}): Promise<unknown> {
+    if (!this.accessToken || !this.accessTokenExpiry || this.accessTokenExpiry <= new Date()) {
+      await this.authenticate();
+    }
+    const host = this.environment === 'sandbox'
+      ? 'https://sandbox-quickbooks.api.intuit.com'
+      : 'https://quickbooks.api.intuit.com';
+    const url = new URL(`/v3/company/${encodeURIComponent(this.realmId!)}/reports/${reportName}`, host);
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
+    }
+    url.searchParams.set('minorversion', '75');
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${this.accessToken}`, Accept: 'application/json' },
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!response.ok) {
+      // Do not include request headers or provider payloads in errors/logs.
+      throw new Error(`QuickBooks report request failed (HTTP ${response.status}, intuit_tid: ${response.headers.get('intuit_tid') || 'unavailable'})`);
+    }
+    return response.json();
   }
 }
 

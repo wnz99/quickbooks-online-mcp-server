@@ -129,6 +129,12 @@ If the server is running remotely (e.g., via Docker or a cloud host), use the st
 
 ## Supported Entities
 
+Search tools preserve filters together with pagination and count options. Both nested `criteria` arrays and advanced `filters` arrays are normalized by the shared adapter. Sorting by `Id` is rejected because QuickBooks no longer supports it.
+
+Reports use Intuit's 29 documented report endpoints directly, including `GeneralLedger`. Existing aliases such as `GeneralLedgerDetail` and `CustomerSales` map to current names. Unsupported reports are rejected. Modern report JSON is returned unchanged; consumers must handle nested accounts, empty strings, and section rows. `qzurl` is rejected, and `group_by` is accepted only for TransactionList reports. See [Intuit's report migration notice](https://medium.com/intuitdev/upcoming-changes-to-reports-apis-5083ec9aadce).
+
+`get_exchange_rate` accepts `sourcecurrencycode` (for example `EUR`) and optional `asofdate` (`YYYY-MM-DD`), rather than an ID. Its target currency is the company home currency.
+
 All tools follow the naming pattern `{action}_{entity}` (e.g., `create_invoice`, `search_customers`).
 
 | Entity | create | get | update | delete | search |

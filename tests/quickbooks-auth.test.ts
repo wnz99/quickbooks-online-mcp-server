@@ -11,6 +11,7 @@ vi.mock('intuit-oauth', () => ({ default: class {
   createToken = mocks.exchange;
 } }));
 import { QuickbooksClient } from '../src/clients/quickbooksClient';
+import { reportSchema } from '../src/schemas/reports';
 
 describe('QuickBooks connection safety', () => {
   let directory: string;
@@ -27,7 +28,7 @@ describe('QuickBooks connection safety', () => {
     mocks.refresh.mockReset();
     mocks.exchange.mockReset();
   });
-  afterEach(() => { vi.unstubAllEnvs(); fs.rmSync(directory, { recursive: true, force: true }); });
+  afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); fs.rmSync(directory, { recursive: true, force: true }); });
 
   it('coalesces simultaneous refreshes and restores the rotated token after restart', async () => {
     mocks.refresh.mockResolvedValue({ token: { access_token: 'access', refresh_token: 'rotated', expires_in: 3600 } });
@@ -69,5 +70,36 @@ describe('QuickBooks connection safety', () => {
     const state = new URL(client.getAuthorizationUrl()).searchParams.get('state');
     await expect(client.handleOAuthCallback(`https://app.test/callback?state=${state}&realmId=other-realm`)).rejects.toThrow('company');
     expect(mocks.exchange).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['GeneralLedger', 'GeneralLedger'], ['CustomerSales', 'SalesByCustomer'],
+  ])('routes %s to the documented %s report and preserves modern response structure', async (inputName, endpoint) => {
+    mocks.refresh.mockResolvedValue({ token: { access_token: 'test-access', refresh_token: 'rotated', expires_in: 3600 } });
+    // Modern reports nest child accounts, use empty strings, and keep empty
+    // enclosing rows typed as Section. Consumers must receive that JSON intact.
+    const report = { Header: { ReportName: endpoint, StartPeriod: '2025-01-01', EndPeriod: '2025-12-23' },
+      Columns: { Column: [{ ColTitle: 'Account' }, { ColTitle: 'Total' }] },
+      Rows: { Row: [{ type: 'Section', Rows: { Row: [{ type: 'Data', ColData: [{ value: 'Child account' }, { value: '' }] }] } }, { type: 'Section' }] } };
+    const request = vi.fn().mockResolvedValue(new Response(JSON.stringify(report), { status: 200 }));
+    vi.stubGlobal('fetch', request);
+    const args = reportSchema.parse({ reportType: inputName, params: { start_date: '2025-01-01', end_date: '2025-12-23', accounting_method: 'Accrual' } });
+    expect(await new QuickbooksClient().getReport(args.reportType, args.params)).toEqual(report);
+    const url = new URL(String(request.mock.calls[0][0]));
+    expect(url.origin).toBe('https://quickbooks.api.intuit.com');
+    expect(url.pathname).toBe(`/v3/company/deasy-realm/reports/${endpoint}`);
+    expect(url.searchParams.get('end_date')).toBe('2025-12-23');
+    expect(url.searchParams.get('minorversion')).toBe('75');
+    expect(request.mock.calls[0][1].headers.Authorization).toBe('Bearer test-access');
+  });
+
+  it('rejects retired report parameters and reports HTTP errors without provider secrets', async () => {
+    expect(reportSchema.safeParse({ reportType: 'ProfitAndLoss', params: { group_by: 'Customer' } }).success).toBe(false);
+    expect(reportSchema.safeParse({ reportType: 'TrialBalance', params: { qzurl: true } }).success).toBe(false);
+    expect(reportSchema.safeParse({ reportType: 'TrialBalanceFR' }).success).toBe(false);
+    expect(reportSchema.safeParse({ reportType: 'TransactionList', params: { group_by: 'Customer' } }).success).toBe(true);
+    mocks.refresh.mockResolvedValue({ token: { access_token: 'test-access', expires_in: 3600 } });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('provider-secret', { status: 429, headers: { intuit_tid: 'test-trace' } })));
+    await expect(new QuickbooksClient().getReport('TrialBalance')).rejects.toThrow('HTTP 429, intuit_tid: test-trace');
   });
 });

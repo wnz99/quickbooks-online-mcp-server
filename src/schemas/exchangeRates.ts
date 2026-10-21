@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 export const getExchangeRateSchema = z.object({
-  id: z.string().describe("QuickBooks exchange rate ID"),
+  sourcecurrencycode: z.string().regex(/^[A-Z]{3}$/).describe("Source currency ISO 4217 code, e.g. EUR. Target is the company home currency."),
+  asofdate: z.string().date().optional().describe("Optional historical date (YYYY-MM-DD). Omit for the current rate."),
 });
 
 export const updateExchangeRateSchema = z.object({
