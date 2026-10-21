@@ -47,6 +47,9 @@ export function createServer(config: ServerConfig) {
   if (config.logLevel) setLogLevel(config.logLevel);
 
   const apiKey = process.env.MCP_API_KEY;
+  if (config.transport === 'http' && !apiKey) {
+    throw new Error('MCP_API_KEY is required for HTTP transport');
+  }
 
   const server = new FastMCP({
     name: "quickbooks-online",
@@ -165,6 +168,9 @@ export async function startServer(config: ServerConfig) {
 
     // OAuth routes
     app.get("/auth", (c) => {
+      if (c.req.header('Authorization') !== `Bearer ${process.env.MCP_API_KEY}`) {
+        return c.text('Unauthorized', 401);
+      }
       const authUrl = quickbooksClient.getAuthorizationUrl();
       return c.redirect(authUrl);
     });
@@ -173,8 +179,8 @@ export async function startServer(config: ServerConfig) {
       try {
         await quickbooksClient.handleOAuthCallback(c.req.url);
         return c.html(`<html><body style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;margin:0;font-family:Arial,sans-serif;background:#f5f5f5"><h2 style="color:#2E8B57">Successfully connected to QuickBooks!</h2><p>You can close this window now.</p></body></html>`);
-      } catch (error) {
-        logger.error("OAuth callback error", error);
+      } catch {
+        logger.error("QuickBooks OAuth callback rejected");
         return c.html(`<html><body style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;margin:0;font-family:Arial,sans-serif;background:#fff0f0"><h2 style="color:#d32f2f">Error connecting to QuickBooks</h2><p>Please check the server logs for details.</p></body></html>`, 500);
       }
     });

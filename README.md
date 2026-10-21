@@ -79,6 +79,12 @@ bun run build && bun run start:http
 
 The HTTP server listens on port 3000 (configurable via `MCP_PORT`) with a health check at `/health`.
 
+HTTP mode requires `MCP_API_KEY`. Send it as `Authorization: Bearer <key>` when connecting to `/mcp` or starting OAuth at `/auth`. Keep the key in a private credential file or secret store.
+
+For persistent deployments, set `QUICKBOOKS_TOKEN_FILE=/data/quickbooks-tokens.json` and mount a persistent volume at `/data`. OAuth callbacks and token refreshes save credentials atomically there, with mode 600. Saved tokens take precedence over the initial environment token. Set `QUICKBOOKS_REALM_ID` to pin the connection to one company. Back up the token volume privately.
+
+To reconnect remotely, configure `QUICKBOOKS_REDIRECT_URI` to the deployed HTTPS `/callback` URL and register that exact URL in the Intuit developer app. With the same `MCP_API_KEY` available locally, run `bun run auth`; the deployed server generates and validates the single-use OAuth state. Local callbacks use the launcher's own callback listener.
+
 ### Docker
 
 ```bash

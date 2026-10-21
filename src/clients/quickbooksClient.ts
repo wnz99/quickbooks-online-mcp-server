@@ -6,13 +6,14 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import open from 'open';
+import { randomBytes } from 'crypto';
 import { logger } from "../utils/logger";
 
 dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-class QuickbooksClient {
+export class QuickbooksClient {
   private clientId?: string;
   private clientSecret?: string;
   private refreshToken?: string;
@@ -25,6 +26,9 @@ class QuickbooksClient {
   private isAuthenticating: boolean = false;
   private redirectUri: string = process.env.QUICKBOOKS_REDIRECT_URI || 'http://localhost:8000/callback';
   private initialized: boolean = false;
+  private refreshPromise?: Promise<{ access_token: string; expires_in: number }>;
+  private oauthStates = new Map<string, number>();
+  private tokenFile = process.env.QUICKBOOKS_TOKEN_FILE;
 
   private ensureInitialized(): void {
     if (this.initialized) return;
@@ -34,6 +38,15 @@ class QuickbooksClient {
     this.refreshToken = process.env.QUICKBOOKS_REFRESH_TOKEN;
     this.realmId = process.env.QUICKBOOKS_REALM_ID;
     this.environment = process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox';
+
+    if (this.tokenFile && fs.existsSync(this.tokenFile)) {
+      const saved = JSON.parse(fs.readFileSync(this.tokenFile, 'utf8'));
+      if (!saved.refreshToken || !saved.realmId || (this.realmId && saved.realmId !== this.realmId)) {
+        throw new Error('Saved QuickBooks connection does not match the configured company');
+      }
+      this.refreshToken = saved.refreshToken;
+      this.realmId = saved.realmId;
+    }
 
     if (!this.clientId || !this.clientSecret) {
       throw new Error("QUICKBOOKS_CLIENT_ID and QUICKBOOKS_CLIENT_SECRET must be set in environment variables");
@@ -63,13 +76,7 @@ class QuickbooksClient {
       const server = http.createServer(async (req, res) => {
         if (req.url?.startsWith('/callback')) {
           try {
-            const response = await this.oauthClient!.createToken(req.url);
-            const tokens = response.token;
-            
-            // Save tokens
-            this.refreshToken = tokens.refresh_token;
-            this.realmId = tokens.realmId;
-            this.saveTokensToEnv();
+            await this.handleOAuthCallback(`http://localhost:${port}${req.url}`);
             
             // Send success response
             res.writeHead(200, { 'Content-Type': 'text/html' });
@@ -98,7 +105,7 @@ class QuickbooksClient {
               resolve();
             }, 1000);
           } catch (error) {
-            logger.error('Error during token creation', error);
+            logger.error('QuickBooks authorization failed');
             res.writeHead(500, { 'Content-Type': 'text/html' });
             res.end(`
               <html>
@@ -127,10 +134,7 @@ class QuickbooksClient {
       server.listen(port, async () => {
         
         // Generate authorization URL with proper type assertion
-        const authUri = this.oauthClient!.authorizeUri({
-          scope: [OAuthClient.scopes.Accounting as string],
-          state: 'testState'
-        }).toString();
+        const authUri = this.getAuthorizationUrl();
         
         // Open browser automatically
         await open(authUri);
@@ -146,8 +150,17 @@ class QuickbooksClient {
   }
 
   private saveTokensToEnv(): void {
+    if (this.tokenFile) {
+      const directory = path.dirname(this.tokenFile);
+      fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+      const temporary = `${this.tokenFile}.tmp`;
+      fs.writeFileSync(temporary, JSON.stringify({ refreshToken: this.refreshToken, realmId: this.realmId }), { mode: 0o600 });
+      fs.chmodSync(temporary, 0o600);
+      fs.renameSync(temporary, this.tokenFile);
+      return;
+    }
     const tokenPath = path.join(__dirname, '..', '..', '.env');
-    const envContent = fs.readFileSync(tokenPath, 'utf-8');
+    const envContent = fs.existsSync(tokenPath) ? fs.readFileSync(tokenPath, 'utf-8') : '';
     const envLines = envContent.split('\n');
     
     const updateEnvVar = (name: string, value: string) => {
@@ -162,10 +175,20 @@ class QuickbooksClient {
     if (this.refreshToken) updateEnvVar('QUICKBOOKS_REFRESH_TOKEN', this.refreshToken);
     if (this.realmId) updateEnvVar('QUICKBOOKS_REALM_ID', this.realmId);
 
-    fs.writeFileSync(tokenPath, envLines.join('\n'));
+    fs.writeFileSync(tokenPath, envLines.join('\n'), { mode: 0o600 });
   }
 
   async refreshAccessToken() {
+    if (this.refreshPromise) return this.refreshPromise;
+    this.refreshPromise = this.performTokenRefresh();
+    try {
+      return await this.refreshPromise;
+    } finally {
+      this.refreshPromise = undefined;
+    }
+  }
+
+  private async performTokenRefresh() {
     this.ensureInitialized();
 
     if (!this.refreshToken) {
@@ -180,8 +203,11 @@ class QuickbooksClient {
     try {
       // At this point we know refreshToken is not undefined
       const authResponse = await this.oauthClient!.refreshUsingToken(this.refreshToken);
+      if (!authResponse.token.access_token) throw new Error('Missing access token');
       
       this.accessToken = authResponse.token.access_token;
+      this.refreshToken = authResponse.token.refresh_token || this.refreshToken;
+      this.saveTokensToEnv();
       
       // Calculate expiry time
       const expiresIn = authResponse.token.expires_in || 3600; // Default to 1 hour
@@ -191,38 +217,46 @@ class QuickbooksClient {
         access_token: this.accessToken,
         expires_in: expiresIn,
       };
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to refresh Quickbooks token: ${message}`);
+    } catch {
+      throw new Error('Failed to refresh or persist QuickBooks credentials. Reconnect through the authorized OAuth flow.');
     }
   }
 
   getAuthorizationUrl(): string {
     this.ensureInitialized();
+    const now = Date.now();
+    for (const [state, expires] of this.oauthStates) {
+      if (expires < now) this.oauthStates.delete(state);
+    }
+    const state = randomBytes(32).toString('hex');
+    this.oauthStates.set(state, now + 10 * 60 * 1000);
     return this.oauthClient!.authorizeUri({
       scope: [OAuthClient.scopes.Accounting as string],
-      state: 'intuit-auth'
+      state,
     }).toString();
   }
 
   async handleOAuthCallback(callbackUrl: string): Promise<{ refreshToken: string; realmId: string }> {
     this.ensureInitialized();
+    const callback = new URL(callbackUrl);
+    const state = callback.searchParams.get('state') || '';
+    const expires = this.oauthStates.get(state);
+    this.oauthStates.delete(state);
+    if (!expires || expires < Date.now()) throw new Error('Invalid or expired OAuth state');
+    const realmId = callback.searchParams.get('realmId');
+    if (!realmId || (this.realmId && realmId !== this.realmId)) {
+      throw new Error('QuickBooks company does not match the configured connection');
+    }
     const response = await this.oauthClient!.createToken(callbackUrl);
     const tokens = response.token;
+    if (!tokens.refresh_token || !tokens.access_token) throw new Error('Incomplete QuickBooks token response');
     this.refreshToken = tokens.refresh_token;
-    this.realmId = tokens.realmId;
-
-    logger.info('=== QuickBooks OAuth Tokens ===');
-    logger.info(`QUICKBOOKS_REFRESH_TOKEN=${this.refreshToken}`);
-    logger.info(`QUICKBOOKS_REALM_ID=${this.realmId}`);
-    logger.info('==============================');
-
-    // Only persist to .env if the file is writable (local dev)
-    try {
-      this.saveTokensToEnv();
-    } catch {
-      logger.info('Could not write to .env — set the above values manually.');
-    }
+    this.realmId = realmId;
+    this.saveTokensToEnv();
+    this.accessToken = tokens.access_token;
+    this.accessTokenExpiry = new Date(Date.now() + (tokens.expires_in || 3600) * 1000);
+    this.quickbooksInstance = undefined;
+    logger.info('QuickBooks authorization saved');
 
     return { refreshToken: this.refreshToken!, realmId: this.realmId! };
   }
@@ -230,7 +264,6 @@ class QuickbooksClient {
   async forceOAuthFlow() {
     this.ensureInitialized();
     this.refreshToken = undefined;
-    this.realmId = undefined;
     await this.startOAuthFlow();
   }
 
