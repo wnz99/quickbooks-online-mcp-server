@@ -7,6 +7,8 @@ const billLineSchema = z.object({
   Description: z.string().optional().describe("Line description"),
   AccountBasedExpenseLineDetail: z.object({
     AccountRef: entityRefSchema.describe("Expense account reference"),
+    TaxCodeRef: entityRefSchema.optional().describe("Tax code reference for this expense line"),
+    BillableStatus: z.enum(["Billable", "NotBillable", "HasBeenBilled"]).optional().describe("Expense billable status"),
   }).describe("Account-based expense detail"),
 }).describe("Bill line item");
 
@@ -14,6 +16,9 @@ export const createBillSchema = z.object({
   bill: z.object({
     Line: z.array(billLineSchema).describe("Bill line items"),
     VendorRef: entityRefSchema.describe("Vendor reference"),
+    DocNumber: z.string().optional().describe("Supplier invoice reference number"),
+    PrivateNote: z.string().optional().describe("Private note for this bill"),
+    GlobalTaxCalculation: z.enum(["TaxExcluded", "TaxInclusive", "NotApplicable"]).optional().describe("How tax applies to the bill amounts"),
     DueDate: z.string().optional().describe("Due date (YYYY-MM-DD)"),
     TxnDate: z.string().optional().describe("Transaction date (YYYY-MM-DD)"),
     CurrencyRef: currencyRefSchema.optional().describe("Currency for this bill (defaults to company home currency)"),
