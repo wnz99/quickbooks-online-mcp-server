@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createPurchaseOrderSchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerPurchaseOrderTools(server: FastMCP) {
   // ── create_purchase_order ────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "create_purchase_order",
     description: "Create a purchase order in QuickBooks Online.",
     parameters: createPurchaseOrderSchema,
@@ -22,7 +23,7 @@ export function registerPurchaseOrderTools(server: FastMCP) {
   });
 
   // ── get_purchase_order ───────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "get_purchase_order",
     description: "Get a purchase order by ID from QuickBooks Online.",
     parameters: getPurchaseOrderSchema,
@@ -33,7 +34,7 @@ export function registerPurchaseOrderTools(server: FastMCP) {
   });
 
   // ── update_purchase_order ────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "update_purchase_order",
     description: "Update an existing purchase order in QuickBooks Online.",
     parameters: updatePurchaseOrderSchema,
@@ -43,7 +44,7 @@ export function registerPurchaseOrderTools(server: FastMCP) {
   });
 
   // ── delete_purchase_order ────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "delete_purchase_order",
     description: "Delete a purchase order from QuickBooks Online.",
     parameters: deletePurchaseOrderSchema,
@@ -53,7 +54,7 @@ export function registerPurchaseOrderTools(server: FastMCP) {
   });
 
   // ── search_purchase_orders ───────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "search_purchase_orders",
     description: "Search purchase orders in QuickBooks Online that match given criteria.",
     parameters: searchPurchaseOrdersSchema,

@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createPurchaseSchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerPurchaseTools(server: FastMCP) {
   // ── create_purchase ──────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "create_purchase",
     description: "Create a purchase in QuickBooks Online.",
     parameters: createPurchaseSchema,
@@ -22,7 +23,7 @@ export function registerPurchaseTools(server: FastMCP) {
   });
 
   // ── get_purchase ─────────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "get_purchase",
     description: "Get a purchase by ID from QuickBooks Online.",
     parameters: getPurchaseSchema,
@@ -33,7 +34,7 @@ export function registerPurchaseTools(server: FastMCP) {
   });
 
   // ── update_purchase ──────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "update_purchase",
     description: "Update an existing purchase in QuickBooks Online.",
     parameters: updatePurchaseSchema,
@@ -43,7 +44,7 @@ export function registerPurchaseTools(server: FastMCP) {
   });
 
   // ── delete_purchase ──────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "delete_purchase",
     description: "Delete a purchase from QuickBooks Online.",
     parameters: deletePurchaseSchema,
@@ -53,7 +54,7 @@ export function registerPurchaseTools(server: FastMCP) {
   });
 
   // ── search_purchases ─────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "search_purchases",
     description: "Search purchases in QuickBooks Online that match given criteria.",
     parameters: searchPurchasesSchema,

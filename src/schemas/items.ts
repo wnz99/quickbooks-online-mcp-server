@@ -15,9 +15,9 @@ export const getItemSchema = z.object({
 
 export const updateItemSchema = z.object({
   item_id: z.string().min(1).describe("QuickBooks item ID"),
-  patch: z.record(z.any()).describe("Fields to update on the item"),
+  patch: z.record(z.string(), z.unknown()).describe("Fields to update on the item"),
 });
 
 export const searchItemsSchema = z.object({
-  criteria: z.any().describe("Search criteria for items"),
+  criteria: z.any().optional().describe("Search criteria for items"),
 }).describe("Search items");

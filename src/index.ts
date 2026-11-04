@@ -11,6 +11,9 @@ const transport: TransportMode =
     ? "http"
     : "stdio";
 
+// Authentication must see the resolved CLI transport as well as environment configuration.
+process.env.MCP_TRANSPORT = transport;
+
 const port = process.env.MCP_PORT ? parseInt(process.env.MCP_PORT, 10) : 3000;
 const logLevel = (process.env.MCP_LOG_LEVEL || "info") as ServerConfig["logLevel"];
 

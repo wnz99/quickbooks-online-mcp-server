@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createInvoiceSchema,
@@ -42,7 +43,7 @@ function normalizeInvoiceFields(obj: Record<string, unknown>): Record<string, un
 }
 
 export function registerInvoiceTools(server: FastMCP) {
-  server.addTool({
+  registerTool(server, {
     name: "create_invoice",
     description: "Create an invoice in QuickBooks Online.",
     parameters: createInvoiceSchema,
@@ -59,18 +60,26 @@ export function registerInvoiceTools(server: FastMCP) {
             ItemRef: { value: l.item_ref },
             Qty: l.qty,
             UnitPrice: l.unit_price,
+            ...(l.tax_code_ref && { TaxCodeRef: { value: l.tax_code_ref } }),
+            ...(l.service_date && { ServiceDate: l.service_date }),
           },
         })),
         DocNumber: args.doc_number,
         TxnDate: args.txn_date,
         CurrencyRef: args.currency_ref,
+        ExchangeRate: args.exchange_rate,
+        ...(args.linked_txn && { LinkedTxn: args.linked_txn.map(txn => ({ TxnId: txn.txn_id, TxnType: txn.txn_type })) }),
+        ...(args.global_tax_calculation && { GlobalTaxCalculation: args.global_tax_calculation }),
+        ...(args.customer_memo && { CustomerMemo: { value: args.customer_memo } }),
+        ...(args.sales_term_ref && { SalesTermRef: { value: args.sales_term_ref } }),
+        ...(args.bill_email && { BillEmail: { Address: args.bill_email } }),
       };
       const normalizedPayload = normalizeInvoiceFields(invoicePayload);
       return qboRequest(cb => qbo.createInvoice(normalizedPayload, cb));
     }),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "get_invoice",
     description: "Get an invoice by ID from QuickBooks Online.",
     parameters: getInvoiceSchema,
@@ -80,7 +89,7 @@ export function registerInvoiceTools(server: FastMCP) {
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "update_invoice",
     description: "Update an existing invoice in QuickBooks Online.",
     parameters: updateInvoiceSchema,
@@ -91,7 +100,7 @@ export function registerInvoiceTools(server: FastMCP) {
     }),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "delete_invoice",
     description: "Delete an invoice from QuickBooks Online.",
     parameters: deleteInvoiceSchema,
@@ -100,7 +109,7 @@ export function registerInvoiceTools(server: FastMCP) {
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "search_invoices",
     description: "Search invoices in QuickBooks Online that match given criteria.",
     parameters: searchInvoicesSchema,

@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createCreditMemoSchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerCreditMemoTools(server: FastMCP) {
   // ── create_credit_memo ───────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "create_credit_memo",
     description: "Create a credit memo in QuickBooks Online.",
     parameters: createCreditMemoSchema,
@@ -22,7 +23,7 @@ export function registerCreditMemoTools(server: FastMCP) {
   });
 
   // ── get_credit_memo ──────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "get_credit_memo",
     description: "Get a credit memo by ID from QuickBooks Online.",
     parameters: getCreditMemoSchema,
@@ -33,7 +34,7 @@ export function registerCreditMemoTools(server: FastMCP) {
   });
 
   // ── update_credit_memo ───────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "update_credit_memo",
     description: "Update an existing credit memo in QuickBooks Online.",
     parameters: updateCreditMemoSchema,
@@ -43,7 +44,7 @@ export function registerCreditMemoTools(server: FastMCP) {
   });
 
   // ── delete_credit_memo ───────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "delete_credit_memo",
     description: "Delete a credit memo from QuickBooks Online.",
     parameters: deleteCreditMemoSchema,
@@ -53,7 +54,7 @@ export function registerCreditMemoTools(server: FastMCP) {
   });
 
   // ── search_credit_memos ──────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "search_credit_memos",
     description: "Search credit memos in QuickBooks Online that match given criteria.",
     parameters: searchCreditMemosSchema,

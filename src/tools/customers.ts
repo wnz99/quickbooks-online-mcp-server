@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createCustomerSchema,
@@ -11,7 +12,7 @@ import { buildQuickbooksSearchCriteria, type QuickbooksSearchCriteriaInput } fro
 import { executeQbo } from "../utils/executeQbo";
 
 export function registerCustomerTools(server: FastMCP) {
-  server.addTool({
+  registerTool(server, {
     name: "create_customer",
     description: "Create a customer in QuickBooks Online.",
     parameters: createCustomerSchema,
@@ -20,7 +21,7 @@ export function registerCustomerTools(server: FastMCP) {
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "get_customer",
     description: "Get a customer by ID from QuickBooks Online.",
     parameters: getCustomerSchema,
@@ -30,7 +31,7 @@ export function registerCustomerTools(server: FastMCP) {
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "update_customer",
     description: "Update an existing customer in QuickBooks Online.",
     parameters: updateCustomerSchema,
@@ -39,7 +40,7 @@ export function registerCustomerTools(server: FastMCP) {
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "delete_customer",
     description: "Deactivate a customer in QuickBooks Online (customers cannot be hard-deleted).",
     parameters: deleteCustomerSchema,
@@ -57,7 +58,7 @@ export function registerCustomerTools(server: FastMCP) {
     }),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "search_customers",
     description: "Search customers in QuickBooks Online that match given criteria.",
     parameters: searchCustomersSchema,

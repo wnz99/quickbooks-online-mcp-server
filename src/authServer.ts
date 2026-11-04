@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 
-import open from "open";
 import { quickbooksClient } from "./clients/quickbooksClient";
 import { logger } from "./utils/logger";
 
-const authUrl = quickbooksClient.getAuthorizationUrl();
-logger.info("Opening browser for QuickBooks authorization...");
-logger.info(`Callback will be handled by: ${process.env.QUICKBOOKS_REDIRECT_URI || "http://localhost:8000/callback"}`);
-
-await open(authUrl);
+if (process.env.QUICKBOOKS_ENVIRONMENT === "production" || process.env.MCP_TRANSPORT === "http") {
+  logger.info("Visit /auth on your running HTTPS server to connect QuickBooks.");
+} else {
+  await quickbooksClient.forceOAuthFlow();
+}

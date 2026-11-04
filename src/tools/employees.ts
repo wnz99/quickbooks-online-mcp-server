@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createEmployeeSchema,
@@ -11,7 +12,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerEmployeeTools(server: FastMCP) {
   // ── create_employee ──────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "create_employee",
     description: "Create an employee in QuickBooks Online.",
     parameters: createEmployeeSchema,
@@ -21,7 +22,7 @@ export function registerEmployeeTools(server: FastMCP) {
   });
 
   // ── get_employee ─────────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "get_employee",
     description: "Get an employee by ID from QuickBooks Online.",
     parameters: getEmployeeSchema,
@@ -32,7 +33,7 @@ export function registerEmployeeTools(server: FastMCP) {
   });
 
   // ── update_employee ──────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "update_employee",
     description: "Update an existing employee in QuickBooks Online.",
     parameters: updateEmployeeSchema,
@@ -42,7 +43,7 @@ export function registerEmployeeTools(server: FastMCP) {
   });
 
   // ── search_employees ─────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "search_employees",
     description: "Search employees in QuickBooks Online that match given criteria.",
     parameters: searchEmployeesSchema,

@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createTermSchema,
@@ -11,7 +12,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerTermTools(server: FastMCP) {
   // ── create_term ──
-  server.addTool({
+  registerTool(server, {
     name: "create_term",
     description: "Create a term in QuickBooks Online.",
     parameters: createTermSchema,
@@ -21,7 +22,7 @@ export function registerTermTools(server: FastMCP) {
   });
 
   // ── get_term ──
-  server.addTool({
+  registerTool(server, {
     name: "get_term",
     description: "Get a term by ID from QuickBooks Online.",
     parameters: getTermSchema,
@@ -32,7 +33,7 @@ export function registerTermTools(server: FastMCP) {
   });
 
   // ── update_term ──
-  server.addTool({
+  registerTool(server, {
     name: "update_term",
     description: "Update an existing term in QuickBooks Online.",
     parameters: updateTermSchema,
@@ -42,7 +43,7 @@ export function registerTermTools(server: FastMCP) {
   });
 
   // ── search_terms ──
-  server.addTool({
+  registerTool(server, {
     name: "search_terms",
     description: "Search terms in QuickBooks Online that match given criteria.",
     parameters: searchTermsSchema,

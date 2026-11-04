@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createVendorSchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerVendorTools(server: FastMCP) {
   // ── create_vendor ────────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "create_vendor",
     description: "Create a vendor in QuickBooks Online.",
     parameters: createVendorSchema,
@@ -22,7 +23,7 @@ export function registerVendorTools(server: FastMCP) {
   });
 
   // ── get_vendor ───────────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "get_vendor",
     description: "Get a vendor by ID from QuickBooks Online.",
     parameters: getVendorSchema,
@@ -33,7 +34,7 @@ export function registerVendorTools(server: FastMCP) {
   });
 
   // ── update_vendor ────────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "update_vendor",
     description: "Update an existing vendor in QuickBooks Online.",
     parameters: updateVendorSchema,
@@ -43,7 +44,7 @@ export function registerVendorTools(server: FastMCP) {
   });
 
   // ── delete_vendor ────────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "delete_vendor",
     description: "Deactivate a vendor in QuickBooks Online (vendors cannot be hard-deleted).",
     parameters: deleteVendorSchema,
@@ -53,7 +54,7 @@ export function registerVendorTools(server: FastMCP) {
   });
 
   // ── search_vendors ───────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "search_vendors",
     description: "Search vendors in QuickBooks Online that match given criteria.",
     parameters: searchVendorsSchema,

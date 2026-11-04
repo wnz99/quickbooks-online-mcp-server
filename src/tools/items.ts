@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createItemSchema,
@@ -10,7 +11,7 @@ import { buildQuickbooksSearchCriteria } from "../utils/search";
 import { executeQbo } from "../utils/executeQbo";
 
 export function registerItemTools(server: FastMCP) {
-  server.addTool({
+  registerTool(server, {
     name: "create_item",
     description: "Create an item (product or service) in QuickBooks Online.",
     parameters: createItemSchema,
@@ -27,7 +28,7 @@ export function registerItemTools(server: FastMCP) {
     }),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "get_item",
     description: "Get an item by ID from QuickBooks Online.",
     parameters: getItemSchema,
@@ -37,7 +38,7 @@ export function registerItemTools(server: FastMCP) {
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "update_item",
     description: "Update an existing item in QuickBooks Online.",
     parameters: updateItemSchema,
@@ -48,7 +49,7 @@ export function registerItemTools(server: FastMCP) {
     }),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "search_items",
     description: "Search items in QuickBooks Online that match given criteria.",
     parameters: searchItemsSchema,

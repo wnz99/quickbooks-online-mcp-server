@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createRefundReceiptSchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerRefundReceiptTools(server: FastMCP) {
   // ── create_refund_receipt ──
-  server.addTool({
+  registerTool(server, {
     name: "create_refund_receipt",
     description: "Create a refund receipt in QuickBooks Online.",
     parameters: createRefundReceiptSchema,
@@ -22,7 +23,7 @@ export function registerRefundReceiptTools(server: FastMCP) {
   });
 
   // ── get_refund_receipt ──
-  server.addTool({
+  registerTool(server, {
     name: "get_refund_receipt",
     description: "Get a refund receipt by ID from QuickBooks Online.",
     parameters: getRefundReceiptSchema,
@@ -33,7 +34,7 @@ export function registerRefundReceiptTools(server: FastMCP) {
   });
 
   // ── update_refund_receipt ──
-  server.addTool({
+  registerTool(server, {
     name: "update_refund_receipt",
     description: "Update an existing refund receipt in QuickBooks Online.",
     parameters: updateRefundReceiptSchema,
@@ -43,7 +44,7 @@ export function registerRefundReceiptTools(server: FastMCP) {
   });
 
   // ── delete_refund_receipt ──
-  server.addTool({
+  registerTool(server, {
     name: "delete_refund_receipt",
     description: "Delete a refund receipt from QuickBooks Online.",
     parameters: deleteRefundReceiptSchema,
@@ -53,7 +54,7 @@ export function registerRefundReceiptTools(server: FastMCP) {
   });
 
   // ── search_refund_receipts ──
-  server.addTool({
+  registerTool(server, {
     name: "search_refund_receipts",
     description: "Search refund receipts in QuickBooks Online that match given criteria.",
     parameters: searchRefundReceiptsSchema,

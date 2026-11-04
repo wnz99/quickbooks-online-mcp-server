@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createAttachableSchema,
@@ -9,20 +10,30 @@ import {
 import { qboRequest, type QBQueryResponse } from "../utils/qboRequest";
 import { buildQuickbooksSearchCriteria } from "../utils/search";
 import { executeQbo } from "../utils/executeQbo";
+import { createQuickbooksAttachable } from "../operations/createAttachable";
+import { unwrap } from "../operations/result";
+import { inferContentType } from "../utils/attachableFileSource";
+import path from "path";
 
 export function registerAttachableTools(server: FastMCP) {
   // ── create_attachable ──
-  server.addTool({
+  registerTool(server, {
     name: "create_attachable",
     description: "Create a attachable in QuickBooks Online.",
     parameters: createAttachableSchema,
-    execute: executeQbo("create_attachable", (qbo, args) =>
-      qboRequest(cb => qbo.createAttachable(args.attachable, cb))
-    ),
+    execute: executeQbo("create_attachable", async (qbo, args) => {
+      const hasUpload = Boolean(args.file_path || args.file_url || args.base64_content);
+      if (args.attachable) {
+        if (hasUpload || args.file_name) throw new Error("Use either attachable metadata or upload fields, not both");
+        return qboRequest(cb => qbo.createAttachable(args.attachable!, cb));
+      }
+      if (!args.file_name) throw new Error("file_name is required when attachable is omitted");
+      return unwrap(await createQuickbooksAttachable({ ...args, file_name: args.file_name }));
+    }),
   });
 
   // ── get_attachable ──
-  server.addTool({
+  registerTool(server, {
     name: "get_attachable",
     description: "Get a attachable by ID from QuickBooks Online.",
     parameters: getAttachableSchema,
@@ -33,17 +44,22 @@ export function registerAttachableTools(server: FastMCP) {
   });
 
   // ── update_attachable ──
-  server.addTool({
+  registerTool(server, {
     name: "update_attachable",
     description: "Update an existing attachable in QuickBooks Online.",
     parameters: updateAttachableSchema,
-    execute: executeQbo("update_attachable", (qbo, args) =>
-      qboRequest(cb => qbo.updateAttachable(args.attachable, cb))
-    ),
+    execute: executeQbo("update_attachable", (qbo, args) => {
+      const metadata = { ...args.attachable };
+      if (args.file_path) {
+        metadata.FileName ??= path.basename(args.file_path);
+        metadata.ContentType ??= inferContentType(args.file_path) ?? undefined;
+      }
+      return qboRequest(cb => qbo.updateAttachable(metadata, cb));
+    }),
   });
 
   // ── delete_attachable ──
-  server.addTool({
+  registerTool(server, {
     name: "delete_attachable",
     description: "Delete a attachable from QuickBooks Online.",
     parameters: deleteAttachableSchema,
@@ -53,7 +69,7 @@ export function registerAttachableTools(server: FastMCP) {
   });
 
   // ── search_attachables ──
-  server.addTool({
+  registerTool(server, {
     name: "search_attachables",
     description: "Search attachables in QuickBooks Online that match given criteria.",
     parameters: searchAttachablesSchema,

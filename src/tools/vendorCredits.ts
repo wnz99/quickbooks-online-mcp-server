@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createVendorCreditSchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerVendorCreditTools(server: FastMCP) {
   // ── create_vendor_credit ──
-  server.addTool({
+  registerTool(server, {
     name: "create_vendor_credit",
     description: "Create a vendor credit in QuickBooks Online.",
     parameters: createVendorCreditSchema,
@@ -22,7 +23,7 @@ export function registerVendorCreditTools(server: FastMCP) {
   });
 
   // ── get_vendor_credit ──
-  server.addTool({
+  registerTool(server, {
     name: "get_vendor_credit",
     description: "Get a vendor credit by ID from QuickBooks Online.",
     parameters: getVendorCreditSchema,
@@ -33,7 +34,7 @@ export function registerVendorCreditTools(server: FastMCP) {
   });
 
   // ── update_vendor_credit ──
-  server.addTool({
+  registerTool(server, {
     name: "update_vendor_credit",
     description: "Update an existing vendor credit in QuickBooks Online.",
     parameters: updateVendorCreditSchema,
@@ -43,7 +44,7 @@ export function registerVendorCreditTools(server: FastMCP) {
   });
 
   // ── delete_vendor_credit ──
-  server.addTool({
+  registerTool(server, {
     name: "delete_vendor_credit",
     description: "Delete a vendor credit from QuickBooks Online.",
     parameters: deleteVendorCreditSchema,
@@ -53,7 +54,7 @@ export function registerVendorCreditTools(server: FastMCP) {
   });
 
   // ── search_vendor_credits ──
-  server.addTool({
+  registerTool(server, {
     name: "search_vendor_credits",
     description: "Search vendor credits in QuickBooks Online that match given criteria.",
     parameters: searchVendorCreditsSchema,

@@ -15,6 +15,8 @@ WORKDIR /app
 COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile --production
 COPY --from=builder /app/dist ./dist
+COPY THIRD_PARTY_NOTICES.md ./
+COPY third_party/ ./third_party/
 
 ENV MCP_TRANSPORT=http
 ENV MCP_PORT=3000

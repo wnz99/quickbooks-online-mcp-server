@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   getTaxCodeSchema,
@@ -10,7 +11,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerTaxCodeTools(server: FastMCP) {
   // ── get_tax_code ──
-  server.addTool({
+  registerTool(server, {
     name: "get_tax_code",
     description: "Get a tax code by ID from QuickBooks Online.",
     parameters: getTaxCodeSchema,
@@ -21,7 +22,7 @@ export function registerTaxCodeTools(server: FastMCP) {
   });
 
   // ── update_tax_code ──
-  server.addTool({
+  registerTool(server, {
     name: "update_tax_code",
     description: "Update an existing tax code in QuickBooks Online.",
     parameters: updateTaxCodeSchema,
@@ -31,7 +32,7 @@ export function registerTaxCodeTools(server: FastMCP) {
   });
 
   // ── search_tax_codes ──
-  server.addTool({
+  registerTool(server, {
     name: "search_tax_codes",
     description: "Search tax codes in QuickBooks Online that match given criteria.",
     parameters: searchTaxCodesSchema,

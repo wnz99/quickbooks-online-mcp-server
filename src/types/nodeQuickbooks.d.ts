@@ -16,6 +16,9 @@ declare module 'node-quickbooks' {
     );
 
     // Account
+    getTransfer(id: string, callback: QBCallback): void;
+    findBudgets(options: object, callback: QBCallback): void;
+    getInvoicePdf(id: string, callback: QBCallback<Buffer>): void;
     createAccount(account: object, callback: QBCallback): void;
     getAccount(id: string, callback: QBCallback): void;
     updateAccount(account: object, callback: QBCallback): void;
