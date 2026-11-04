@@ -20,6 +20,9 @@ jobs:
       - run: bun run build
       - run: bun run lint
       - run: bun run test
+      - name: Build deployment image
+        if: runner.os == 'Linux'
+        run: docker build --tag qbo-mcp:ci .
   dependency-audit:
     runs-on: ubuntu-latest
     steps:

@@ -9,6 +9,7 @@ dist
 .vscode
 docs
 *.md
+!THIRD_PARTY_NOTICES.md
 !README.md
 Dockerfile
 docker-compose.yml
