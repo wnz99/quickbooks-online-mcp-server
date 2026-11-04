@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createBillPaymentSchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerBillPaymentTools(server: FastMCP) {
   // ── create_bill_payment ──────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "create_bill_payment",
     description: "Create a bill payment in QuickBooks Online.",
     parameters: createBillPaymentSchema,
@@ -22,7 +23,7 @@ export function registerBillPaymentTools(server: FastMCP) {
   });
 
   // ── get_bill_payment ─────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "get_bill_payment",
     description: "Get a bill payment by ID from QuickBooks Online.",
     parameters: getBillPaymentSchema,
@@ -33,7 +34,7 @@ export function registerBillPaymentTools(server: FastMCP) {
   });
 
   // ── update_bill_payment ──────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "update_bill_payment",
     description: "Update an existing bill payment in QuickBooks Online.",
     parameters: updateBillPaymentSchema,
@@ -45,7 +46,7 @@ export function registerBillPaymentTools(server: FastMCP) {
   // ── delete_bill_payment ──────────────────────────────────────────────
   // Bill payments cannot be deleted via the QBO API. They can be voided
   // by updating them. This tool fetches the payment and sets it to void.
-  server.addTool({
+  registerTool(server, {
     name: "delete_bill_payment",
     description: "Void a bill payment in QuickBooks Online (bill payments cannot be hard-deleted).",
     parameters: deleteBillPaymentSchema,
@@ -65,7 +66,7 @@ export function registerBillPaymentTools(server: FastMCP) {
   });
 
   // ── search_bill_payments ─────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "search_bill_payments",
     description: "Search bill payments in QuickBooks Online that match given criteria.",
     parameters: searchBillPaymentsSchema,

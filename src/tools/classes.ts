@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createClassSchema,
@@ -11,7 +12,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerClassTools(server: FastMCP) {
   // ── create_class ──
-  server.addTool({
+  registerTool(server, {
     name: "create_class",
     description: "Create a class in QuickBooks Online.",
     parameters: createClassSchema,
@@ -21,7 +22,7 @@ export function registerClassTools(server: FastMCP) {
   });
 
   // ── get_class ──
-  server.addTool({
+  registerTool(server, {
     name: "get_class",
     description: "Get a class by ID from QuickBooks Online.",
     parameters: getClassSchema,
@@ -32,7 +33,7 @@ export function registerClassTools(server: FastMCP) {
   });
 
   // ── update_class ──
-  server.addTool({
+  registerTool(server, {
     name: "update_class",
     description: "Update an existing class in QuickBooks Online.",
     parameters: updateClassSchema,
@@ -42,7 +43,7 @@ export function registerClassTools(server: FastMCP) {
   });
 
   // ── search_classes ──
-  server.addTool({
+  registerTool(server, {
     name: "search_classes",
     description: "Search classs in QuickBooks Online that match given criteria.",
     parameters: searchClassesSchema,

@@ -1,8 +1,10 @@
 # QuickBooks Online MCP Server
 
-A [Model Context Protocol](https://modelcontextprotocol.io) server for QuickBooks Online. Provides 139 tools covering all 32 QBO entities plus reports, with full CRUD and search support.
+A [Model Context Protocol](https://modelcontextprotocol.io) server for QuickBooks Online. Provides 144 tools covering QBO entities, read-only budgets, invoice PDFs and reports.
 
 Built with [FastMCP](https://github.com/punkpeye/fastmcp), [Bun](https://bun.sh), and the [node-quickbooks](https://github.com/mcohen01/node-quickbooks) SDK.
+
+Uses FastMCP 4 and Zod 4 while preserving the original tool interface. Production audits block High/Critical advisories; see the port notes for the remaining moderate advisory.
 
 ## Prerequisites
 
@@ -55,6 +57,27 @@ bun run auth
 
 This starts a local server, opens your browser for QuickBooks authorization, and saves the tokens to `.env` automatically.
 
+For production or hosted HTTP, configure a public HTTPS `QUICKBOOKS_REDIRECT_URI` ending in `/callback`, register it with Intuit, start the HTTP server, and visit `/auth`. When `MCP_API_KEY` is set, the page asks for that key before starting authorization. Each callback requires a short-lived, single-use state bound to the browser. Production authentication never falls back to a localhost browser flow.
+
+The server persists rotated refresh tokens and shares refresh requests between concurrent calls. Set `QUICKBOOKS_TOKEN_STORE_PATH` in the **host process environment** to an absolute writable file path for containers or read-only installations. The file supplies configuration and receives rotated tokens; the package's `.env` is not loaded when this override is set. Existing symlinks are preserved. Regular files use atomic replacement; writes through symlinks retain upstream's non-atomic behavior.
+
+Set `QUICKBOOKS_DISABLE_WRITE=true`, `QUICKBOOKS_DISABLE_UPDATE=true`, or `QUICKBOOKS_DISABLE_DELETE=true` to suppress those tool categories at registration. Read tools stay available. Unsupported top-level parameters produce a warning in the existing JSON response rather than disappearing silently. Raw QBO payload objects continue to accept QBO fields.
+
+### Imported upstream behavior
+
+The port preserves the existing snake_case tool names, argument nesting, `{ success, result }` / `{ success, error }` responses, FastMCP, Bun, stateless HTTP, optional bearer authentication, currency tools, prompts and resources. [The port notes](docs/upstream-port.md) map upstream changes and compatibility checks.
+
+- `create_invoice` adds tax codes, service dates, linked transactions, customer memo, sales terms and billing email.
+- Bills preserve line tax/class references during updates and support item-based expenses. Stale `SyncToken` values fail before writing.
+- Deposit updates preserve required fields. Account operations support parent references. Journal entries validate line structure and pass through other QBO fields.
+- `get_report` keeps its interface, maps `GeneralLedger` to the SDK's `GeneralLedgerDetail`, and omits unsupported `start_date` on `BalanceSheet`. Existing report parameters, including `summarize_column_by=Classes`, pass through.
+- Added tools: `get_transfer`, `delete_item`, `delete_employee`, `search_budgets` and `get_invoice_pdf`. Item/employee deletion deactivates the record.
+- `create_attachable` keeps `{ attachable: ... }` metadata input and adds `file_name`, `file_path`, `file_url`, `base64_content` and optional `attachable_ref`. Supply either the old metadata object or the new fields. Uploads enforce a 100 MB file limit and QBO MIME types. URL downloads require HTTPS, validate every redirect and pin validated DNS addresses.
+- Local attachment uploads require an explicit `QUICKBOOKS_ATTACHABLE_BASE_DIR` in HTTP mode. In stdio mode, home and temporary directories are the defaults. Separate multiple allowed directories with `;`. Dotfiles, credential files and the server installation are denied.
+- `get_invoice_pdf` returns base64 by default. Disk output requires `QBO_PDF_OUTPUT_DIR`; paths and symlinks cannot escape it. Overwrites require `overwrite=true`. `QBO_PDF_MAX_BYTES` sets the returned PDF size cap (default 50 MiB).
+
+Run `bun run test`, `bun run build`, `bun run lint` and `bun run audit:production` to verify the port. Tests use isolated token stores and mock QBO calls; they never access real credentials or change company data.
+
 ## Running
 
 ### stdio transport (for Claude Desktop, Cursor, etc.)
@@ -78,6 +101,12 @@ bun run build && bun run start:http
 ```
 
 The HTTP server listens on port 3000 (configurable via `MCP_PORT`) with a health check at `/health`.
+
+HTTP mode requires `MCP_API_KEY`. Send it as `Authorization: Bearer <key>` when connecting to `/mcp` or starting OAuth at `/auth`. Keep the key in a private credential file or secret store.
+
+For persistent deployments, set `QUICKBOOKS_TOKEN_FILE=/data/quickbooks-tokens.json` and mount a persistent volume at `/data`. OAuth callbacks and token refreshes save credentials atomically there, with mode 600. Saved tokens take precedence over the initial environment token. Set `QUICKBOOKS_REALM_ID` to pin the connection to one company. Back up the token volume privately.
+
+To reconnect remotely, configure `QUICKBOOKS_REDIRECT_URI` to the deployed HTTPS `/callback` URL and register that exact URL in the Intuit developer app. With the same `MCP_API_KEY` available locally, run `bun run auth`; the deployed server generates and validates the single-use OAuth state. Local callbacks use the launcher's own callback listener.
 
 ### Docker
 
@@ -122,6 +151,12 @@ If the server is running remotely (e.g., via Docker or a cloud host), use the st
 ```
 
 ## Supported Entities
+
+Search tools preserve filters together with pagination and count options. Both nested `criteria` arrays and advanced `filters` arrays are normalized by the shared adapter. Sorting by `Id` is rejected because QuickBooks no longer supports it.
+
+Reports use Intuit's 29 documented report endpoints directly, including `GeneralLedger`. Existing aliases such as `GeneralLedgerDetail` and `CustomerSales` map to current names. Unsupported reports are rejected. Modern report JSON is returned unchanged; consumers must handle nested accounts, empty strings, and section rows. `qzurl` is rejected, and `group_by` is accepted only for TransactionList reports. See [Intuit's report migration notice](https://medium.com/intuitdev/upcoming-changes-to-reports-apis-5083ec9aadce).
+
+`get_exchange_rate` accepts `sourcecurrencycode` (for example `EUR`) and optional `asofdate` (`YYYY-MM-DD`), rather than an ID. Its target currency is the company home currency.
 
 All tools follow the naming pattern `{action}_{entity}` (e.g., `create_invoice`, `search_customers`).
 

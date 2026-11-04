@@ -16,6 +16,9 @@ declare module 'node-quickbooks' {
     );
 
     // Account
+    getTransfer(id: string, callback: QBCallback): void;
+    findBudgets(options: object, callback: QBCallback): void;
+    getInvoicePdf(id: string, callback: QBCallback<Buffer>): void;
     createAccount(account: object, callback: QBCallback): void;
     getAccount(id: string, callback: QBCallback): void;
     updateAccount(account: object, callback: QBCallback): void;
@@ -93,7 +96,7 @@ declare module 'node-quickbooks' {
     findEstimates(options: object, callback: QBCallback): void;
 
     // Exchange Rate
-    getExchangeRate(id: string, callback: QBCallback): void;
+    getExchangeRate(options: { sourcecurrencycode: string; asofdate?: string }, callback: QBCallback): void;
     updateExchangeRate(exchangeRate: object, callback: QBCallback): void;
 
     // Invoice
@@ -217,7 +220,5 @@ declare module 'node-quickbooks' {
     deleteVendorCredit(idOrEntity: any, callback: QBCallback): void;
     findVendorCredits(options: object, callback: QBCallback): void;
 
-    // Reports (dynamic method names: report{ReportType})
-    [key: `report${string}`]: (options: object, callback: QBCallback) => void;
   }
 }

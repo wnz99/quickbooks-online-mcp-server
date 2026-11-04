@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createTaxAgencySchema,
@@ -11,7 +12,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerTaxAgencyTools(server: FastMCP) {
   // ── create_tax_agency ──
-  server.addTool({
+  registerTool(server, {
     name: "create_tax_agency",
     description: "Create a tax agency in QuickBooks Online.",
     parameters: createTaxAgencySchema,
@@ -21,7 +22,7 @@ export function registerTaxAgencyTools(server: FastMCP) {
   });
 
   // ── get_tax_agency ──
-  server.addTool({
+  registerTool(server, {
     name: "get_tax_agency",
     description: "Get a tax agency by ID from QuickBooks Online.",
     parameters: getTaxAgencySchema,
@@ -32,7 +33,7 @@ export function registerTaxAgencyTools(server: FastMCP) {
   });
 
   // ── update_tax_agency ──
-  server.addTool({
+  registerTool(server, {
     name: "update_tax_agency",
     description: "Update an existing tax agency in QuickBooks Online.",
     parameters: updateTaxAgencySchema,
@@ -42,7 +43,7 @@ export function registerTaxAgencyTools(server: FastMCP) {
   });
 
   // ── search_tax_agencies ──
-  server.addTool({
+  registerTool(server, {
     name: "search_tax_agencies",
     description: "Search tax agencys in QuickBooks Online that match given criteria.",
     parameters: searchTaxAgenciesSchema,

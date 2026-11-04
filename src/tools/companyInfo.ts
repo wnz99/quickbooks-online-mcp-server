@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   getCompanyInfoSchema,
@@ -8,7 +9,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerCompanyInfoTools(server: FastMCP) {
   // ── get_company_info ──
-  server.addTool({
+  registerTool(server, {
     name: "get_company_info",
     description: "Get a company info by ID from QuickBooks Online.",
     parameters: getCompanyInfoSchema,
@@ -19,7 +20,7 @@ export function registerCompanyInfoTools(server: FastMCP) {
   });
 
   // ── update_company_info ──
-  server.addTool({
+  registerTool(server, {
     name: "update_company_info",
     description: "Update an existing company info in QuickBooks Online.",
     parameters: updateCompanyInfoSchema,

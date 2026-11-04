@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   getTaxRateSchema,
@@ -10,7 +11,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerTaxRateTools(server: FastMCP) {
   // ── get_tax_rate ──
-  server.addTool({
+  registerTool(server, {
     name: "get_tax_rate",
     description: "Get a tax rate by ID from QuickBooks Online.",
     parameters: getTaxRateSchema,
@@ -21,7 +22,7 @@ export function registerTaxRateTools(server: FastMCP) {
   });
 
   // ── update_tax_rate ──
-  server.addTool({
+  registerTool(server, {
     name: "update_tax_rate",
     description: "Update an existing tax rate in QuickBooks Online.",
     parameters: updateTaxRateSchema,
@@ -31,7 +32,7 @@ export function registerTaxRateTools(server: FastMCP) {
   });
 
   // ── search_tax_rates ──
-  server.addTool({
+  registerTool(server, {
     name: "search_tax_rates",
     description: "Search tax rates in QuickBooks Online that match given criteria.",
     parameters: searchTaxRatesSchema,

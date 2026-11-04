@@ -1,44 +1,55 @@
 {
-    "name": "@qboapi/qbo-mcp-server",
-    "version": "0.0.1",
-    "description": "MCP server implementation for QuickBooks Online integration",
-    "license": "MIT",
-    "main": "dist/index.js",
-    "type": "module",
-    "bin": "./dist/index.js",
-    "files": [
-        "dist"
-    ],
-    "scripts": {
-        "build": "tsc",
-        "start": "bun dist/index.js",
-        "start:stdio": "bun dist/index.js --stdio",
-        "start:http": "MCP_TRANSPORT=http bun dist/index.js --http",
-        "dev": "bun --watch src/index.ts --stdio",
-        "dev:http": "MCP_TRANSPORT=http bun --watch src/index.ts --http",
-        "test": "vitest run",
-        "lint:fix": "eslint --fix",
-        "lint": "eslint .",
-        "auth": "bun src/authServer.ts"
-    },
-    "dependencies": {
-        "dotenv": "^16.4.7",
-        "fastmcp": "^3.33.0",
-        "intuit-oauth": "^4.0.0",
-        "node-quickbooks": "^2.0.43",
-        "open": "^9.1.0",
-        "zod": "^3.24.2"
-    },
-    "devDependencies": {
-        "@eslint/js": "^9.22.0",
-        "@types/node": "^22.13.10",
-        "eslint": "^9.22.0",
-        "eslint-config-prettier": "^10.1.1",
-        "globals": "^16.0.0",
-        "prettier": "3.5.3",
-        "shx": "^0.3.4",
-        "typescript": "^5.8.2",
-        "typescript-eslint": "^8.26.1",
-        "vitest": "^3.2.4"
+  "name": "@qboapi/qbo-mcp-server",
+  "version": "0.0.1",
+  "description": "MCP server implementation for QuickBooks Online integration",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": "./dist/index.js",
+  "files": [
+    "dist",
+    "THIRD_PARTY_NOTICES.md",
+    "third_party"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "bun dist/index.js",
+    "start:stdio": "bun dist/index.js --stdio",
+    "start:http": "MCP_TRANSPORT=http bun dist/index.js --http",
+    "dev": "bun --watch src/index.ts --stdio",
+    "dev:http": "MCP_TRANSPORT=http bun --watch src/index.ts --http",
+    "test": "vitest run",
+    "audit:production": "bun audit --production --audit-level=high",
+    "lint:fix": "eslint --fix",
+    "lint": "eslint .",
+    "auth": "bun src/authServer.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "fastmcp": "^4.24.1",
+    "intuit-oauth": "^4.2.5",
+    "node-quickbooks": "^2.0.50",
+    "open": "^9.1.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/node": "^22.20.5",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.5.0",
+    "prettier": "3.5.3",
+    "shx": "^0.3.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^3.2.7"
+  },
+  "overrides": {
+    "decode-uri-component": "^0.5.1",
+    "node-quickbooks": {
+      "fast-xml-parser": "^5.10.1",
+      "underscore": "^1.13.8",
+      "uuid": "11.1.1"
     }
+  }
 }

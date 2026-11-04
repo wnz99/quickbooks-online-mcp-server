@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   getAccountSchema,
@@ -17,7 +18,6 @@ const accountFieldTypeMap: Record<string, "string" | "boolean" | "number"> = {
   Classification: "string",
   Active: "boolean",
   SubAccount: "boolean",
-  ParentRef: "string",
   CurrentBalance: "number",
 };
 
@@ -46,7 +46,7 @@ function normalizeAccountPayload(payload: Record<string, unknown>): Record<strin
 }
 
 export function registerAccountTools(server: FastMCP) {
-  server.addTool({
+  registerTool(server, {
     name: "get_account",
     description: "Get an account by ID from QuickBooks Online.",
     parameters: getAccountSchema,
@@ -56,7 +56,7 @@ export function registerAccountTools(server: FastMCP) {
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "create_account",
     description: "Create an account in QuickBooks Online chart of accounts.",
     parameters: createAccountSchema,
@@ -67,13 +67,14 @@ export function registerAccountTools(server: FastMCP) {
         AccountSubType: args.sub_type,
         Description: args.description,
         CurrencyRef: args.currency_ref,
+        ...(args.parent_id && { SubAccount: true, ParentRef: { value: args.parent_id } }),
       };
       const payload = normalizeAccountPayload(basePayload);
       return qboRequest(cb => qbo.createAccount(payload, cb));
     }),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "update_account",
     description: "Update an existing account in QuickBooks Online.",
     parameters: updateAccountSchema,
@@ -85,7 +86,7 @@ export function registerAccountTools(server: FastMCP) {
     }),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "search_accounts",
     description: "Search accounts in QuickBooks Online chart of accounts.",
     parameters: searchAccountsSchema,

@@ -5,6 +5,7 @@ export interface QuickbooksFilter {
 }
 
 export interface AdvancedQuickbooksSearchOptions {
+  criteria?: Array<Record<string, unknown>>;
   filters?: QuickbooksFilter[];
   asc?: string;
   desc?: string;
@@ -21,56 +22,54 @@ export type QuickbooksSearchCriteriaInput =
 
 export function buildQuickbooksSearchCriteria(
   input: QuickbooksSearchCriteriaInput
-): Record<string, unknown> | Array<Record<string, unknown>> {
+): Array<Record<string, unknown>> {
+  const criteria: Array<Record<string, unknown>> = [];
+  let count = false;
+
+  const addField = (field: string, value: unknown, operator?: unknown) => {
+    if (!field.trim()) throw new Error('Search field must not be empty');
+    if (value === undefined) return;
+    if (field.toLowerCase() === 'count') {
+      count = Boolean(value);
+      return;
+    }
+    if (['asc', 'desc'].includes(field.toLowerCase()) && String(value).trim().toLowerCase() === 'id') {
+      throw new Error('QuickBooks no longer supports sorting by Id. Choose another sortable field.');
+    }
+    const comparison = operator ?? (Array.isArray(value) ? 'IN' : undefined);
+    criteria.push({ field, value, ...(comparison === undefined ? {} : { operator: comparison }) });
+  };
+
+  const addRecord = (entry: Record<string, unknown>) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+      throw new Error('Search criteria must contain filter objects');
+    }
+    if ('field' in entry || 'key' in entry) {
+      const field = entry.field ?? entry.key;
+      if (typeof field !== 'string' || entry.value === undefined) throw new Error('Search filter requires a field and value');
+      addField(field, entry.value, entry.operator);
+    } else {
+      for (const [field, value] of Object.entries(entry)) addField(field, value);
+    }
+  };
+
   if (Array.isArray(input)) {
-    return input;
+    input.forEach(addRecord);
+  } else if ('field' in input || 'key' in input) {
+    addRecord(input as Record<string, unknown>);
+  } else {
+    for (const [field, value] of Object.entries(input)) {
+      if (field === 'criteria' || field === 'filters') {
+        if (value === undefined) continue;
+        if (!Array.isArray(value)) throw new Error(`${field} must be an array`);
+        value.forEach(addRecord);
+      } else {
+        addField(field, value);
+      }
+    }
   }
 
-  const possibleAdvancedKeys: (keyof AdvancedQuickbooksSearchOptions)[] = [
-    "filters",
-    "asc",
-    "desc",
-    "limit",
-    "offset",
-    "count",
-    "fetchAll",
-  ];
-
-  const inputKeys = Object.keys(input || {});
-  const isAdvanced = inputKeys.some((k) =>
-    possibleAdvancedKeys.includes(k as keyof AdvancedQuickbooksSearchOptions)
-  );
-
-  if (!isAdvanced) {
-    return input as Record<string, unknown>;
-  }
-
-  const options = input as AdvancedQuickbooksSearchOptions;
-  const criteriaArr: Array<Record<string, unknown>> = [];
-
-  options.filters?.forEach((f) => {
-    criteriaArr.push({ field: f.field, value: f.value, operator: f.operator });
-  });
-
-  if (options.asc) {
-    criteriaArr.push({ field: "asc", value: options.asc });
-  }
-  if (options.desc) {
-    criteriaArr.push({ field: "desc", value: options.desc });
-  }
-
-  if (typeof options.limit === "number") {
-    criteriaArr.push({ field: "limit", value: options.limit });
-  }
-  if (typeof options.offset === "number") {
-    criteriaArr.push({ field: "offset", value: options.offset });
-  }
-  if (options.count) {
-    criteriaArr.push({ field: "count", value: true });
-  }
-  if (options.fetchAll) {
-    criteriaArr.push({ field: "fetchAll", value: true });
-  }
-
-  return criteriaArr.length > 0 ? criteriaArr : {};
+  // SDK removes count markers with splice(index, index + 1); first position
+  // prevents its removal from also discarding adjacent filters/options.
+  return count ? [{ count: true }, ...criteria] : criteria;
 }

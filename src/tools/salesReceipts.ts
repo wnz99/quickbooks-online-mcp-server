@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createSalesReceiptSchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerSalesReceiptTools(server: FastMCP) {
   // ── create_sales_receipt ──
-  server.addTool({
+  registerTool(server, {
     name: "create_sales_receipt",
     description: "Create a sales receipt in QuickBooks Online.",
     parameters: createSalesReceiptSchema,
@@ -22,7 +23,7 @@ export function registerSalesReceiptTools(server: FastMCP) {
   });
 
   // ── get_sales_receipt ──
-  server.addTool({
+  registerTool(server, {
     name: "get_sales_receipt",
     description: "Get a sales receipt by ID from QuickBooks Online.",
     parameters: getSalesReceiptSchema,
@@ -33,7 +34,7 @@ export function registerSalesReceiptTools(server: FastMCP) {
   });
 
   // ── update_sales_receipt ──
-  server.addTool({
+  registerTool(server, {
     name: "update_sales_receipt",
     description: "Update an existing sales receipt in QuickBooks Online.",
     parameters: updateSalesReceiptSchema,
@@ -43,7 +44,7 @@ export function registerSalesReceiptTools(server: FastMCP) {
   });
 
   // ── delete_sales_receipt ──
-  server.addTool({
+  registerTool(server, {
     name: "delete_sales_receipt",
     description: "Delete a sales receipt from QuickBooks Online.",
     parameters: deleteSalesReceiptSchema,
@@ -53,7 +54,7 @@ export function registerSalesReceiptTools(server: FastMCP) {
   });
 
   // ── search_sales_receipts ──
-  server.addTool({
+  registerTool(server, {
     name: "search_sales_receipts",
     description: "Search sales receipts in QuickBooks Online that match given criteria.",
     parameters: searchSalesReceiptsSchema,

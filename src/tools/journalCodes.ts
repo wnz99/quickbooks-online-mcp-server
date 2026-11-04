@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createJournalCodeSchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerJournalCodeTools(server: FastMCP) {
   // ── create_journal_code ──
-  server.addTool({
+  registerTool(server, {
     name: "create_journal_code",
     description: "Create a journal code in QuickBooks Online.",
     parameters: createJournalCodeSchema,
@@ -22,7 +23,7 @@ export function registerJournalCodeTools(server: FastMCP) {
   });
 
   // ── get_journal_code ──
-  server.addTool({
+  registerTool(server, {
     name: "get_journal_code",
     description: "Get a journal code by ID from QuickBooks Online.",
     parameters: getJournalCodeSchema,
@@ -33,7 +34,7 @@ export function registerJournalCodeTools(server: FastMCP) {
   });
 
   // ── update_journal_code ──
-  server.addTool({
+  registerTool(server, {
     name: "update_journal_code",
     description: "Update an existing journal code in QuickBooks Online.",
     parameters: updateJournalCodeSchema,
@@ -43,7 +44,7 @@ export function registerJournalCodeTools(server: FastMCP) {
   });
 
   // ── delete_journal_code ──
-  server.addTool({
+  registerTool(server, {
     name: "delete_journal_code",
     description: "Delete a journal code from QuickBooks Online.",
     parameters: deleteJournalCodeSchema,
@@ -53,7 +54,7 @@ export function registerJournalCodeTools(server: FastMCP) {
   });
 
   // ── search_journal_codes ──
-  server.addTool({
+  registerTool(server, {
     name: "search_journal_codes",
     description: "Search journal codes in QuickBooks Online that match given criteria.",
     parameters: searchJournalCodesSchema,

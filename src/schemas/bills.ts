@@ -2,13 +2,27 @@ import { z } from "zod";
 import { currencyRefSchema, entityRefSchema, paginationSchema } from "./shared";
 
 const billLineSchema = z.object({
+  Id: z.string().optional(),
   Amount: z.number().describe("Line amount"),
   DetailType: z.string().optional().default("AccountBasedExpenseLineDetail").describe("Detail type"),
   Description: z.string().optional().describe("Line description"),
   AccountBasedExpenseLineDetail: z.object({
     AccountRef: entityRefSchema.describe("Expense account reference"),
-  }).describe("Account-based expense detail"),
-}).describe("Bill line item");
+    ClassRef: entityRefSchema.optional(),
+    TaxCodeRef: entityRefSchema.optional(),
+    CustomerRef: entityRefSchema.optional(),
+    BillableStatus: z.enum(["Billable", "NotBillable", "HasBeenBilled"]).optional(),
+  }).passthrough().optional().describe("Account-based expense detail"),
+  ItemBasedExpenseLineDetail: z.object({
+    ItemRef: entityRefSchema,
+    Qty: z.number().optional(),
+    UnitPrice: z.number().optional(),
+    ClassRef: entityRefSchema.optional(),
+    TaxCodeRef: entityRefSchema.optional(),
+    CustomerRef: entityRefSchema.optional(),
+    BillableStatus: z.string().optional(),
+  }).passthrough().optional(),
+}).passthrough().describe("Bill line item; DetailType must match the supplied expense detail");
 
 export const createBillSchema = z.object({
   bill: z.object({
@@ -19,7 +33,10 @@ export const createBillSchema = z.object({
     CurrencyRef: currencyRefSchema.optional().describe("Currency for this bill (defaults to company home currency)"),
     ExchangeRate: z.number().optional().describe("Exchange rate for foreign currency bills"),
     APAccountRef: entityRefSchema.optional().describe("Accounts Payable account reference (required for multi-currency bills)"),
-  }).describe("Bill data"),
+    DocNumber: z.string().optional(),
+    GlobalTaxCalculation: z.enum(["TaxExcluded", "TaxInclusive", "NotApplicable"]).optional(),
+    PrivateNote: z.string().optional(),
+  }).passthrough().describe("Bill data"),
 });
 
 export const getBillSchema = z.object({
@@ -30,6 +47,7 @@ export const updateBillSchema = z.object({
   bill: z.object({
     Id: z.string().describe("Bill ID"),
     SyncToken: z.string().describe("Concurrency token"),
+    GlobalTaxCalculation: z.enum(["TaxExcluded", "TaxInclusive", "NotApplicable"]).optional(),
     Line: z.array(billLineSchema).optional().describe("Bill line items"),
     VendorRef: entityRefSchema.optional().describe("Vendor reference"),
     DueDate: z.string().optional().describe("Due date (YYYY-MM-DD)"),
@@ -37,7 +55,9 @@ export const updateBillSchema = z.object({
     CurrencyRef: currencyRefSchema.optional().describe("Currency for this bill"),
     ExchangeRate: z.number().optional().describe("Exchange rate for foreign currency bills"),
     APAccountRef: entityRefSchema.optional().describe("Accounts Payable account reference"),
-  }).describe("Bill data with Id and SyncToken for update"),
+    DocNumber: z.string().optional(),
+    PrivateNote: z.string().optional(),
+  }).passthrough().describe("Bill data with Id and SyncToken for update"),
 });
 
 export const deleteBillSchema = z.object({

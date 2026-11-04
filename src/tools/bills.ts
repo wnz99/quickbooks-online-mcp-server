@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createBillSchema,
@@ -9,9 +10,11 @@ import {
 import { qboRequest, type QBQueryResponse } from "../utils/qboRequest";
 import { buildQuickbooksSearchCriteria } from "../utils/search";
 import { executeQbo } from "../utils/executeQbo";
+import { updateQuickbooksBill } from "../operations/updateBill";
+import { unwrap } from "../operations/result";
 
 export function registerBillTools(server: FastMCP) {
-  server.addTool({
+  registerTool(server, {
     name: "create_bill",
     description: "Create a bill in QuickBooks Online.",
     parameters: createBillSchema,
@@ -20,7 +23,7 @@ export function registerBillTools(server: FastMCP) {
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "get_bill",
     description: "Get a bill by ID from QuickBooks Online.",
     parameters: getBillSchema,
@@ -30,16 +33,16 @@ export function registerBillTools(server: FastMCP) {
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "update_bill",
     description: "Update an existing bill in QuickBooks Online.",
     parameters: updateBillSchema,
-    execute: executeQbo("update_bill", (qbo, args) =>
-      qboRequest(cb => qbo.updateBill(args.bill, cb))
+    execute: executeQbo("update_bill", async (_qbo, args) =>
+      unwrap(await updateQuickbooksBill(args.bill))
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "delete_bill",
     description: "Delete a bill from QuickBooks Online.",
     parameters: deleteBillSchema,
@@ -48,7 +51,7 @@ export function registerBillTools(server: FastMCP) {
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "search_bills",
     description: "Search bills in QuickBooks Online that match given criteria.",
     parameters: searchBillsSchema,

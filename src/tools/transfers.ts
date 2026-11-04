@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createTransferSchema,
@@ -11,7 +12,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerTransferTools(server: FastMCP) {
   // ── create_transfer ──
-  server.addTool({
+  registerTool(server, {
     name: "create_transfer",
     description: "Create a transfer in QuickBooks Online.",
     parameters: createTransferSchema,
@@ -21,7 +22,7 @@ export function registerTransferTools(server: FastMCP) {
   });
 
   // ── update_transfer ──
-  server.addTool({
+  registerTool(server, {
     name: "update_transfer",
     description: "Update an existing transfer in QuickBooks Online.",
     parameters: updateTransferSchema,
@@ -31,7 +32,7 @@ export function registerTransferTools(server: FastMCP) {
   });
 
   // ── delete_transfer ──
-  server.addTool({
+  registerTool(server, {
     name: "delete_transfer",
     description: "Delete a transfer from QuickBooks Online.",
     parameters: deleteTransferSchema,
@@ -41,7 +42,7 @@ export function registerTransferTools(server: FastMCP) {
   });
 
   // ── search_transfers ──
-  server.addTool({
+  registerTool(server, {
     name: "search_transfers",
     description: "Search transfers in QuickBooks Online that match given criteria.",
     parameters: searchTransfersSchema,

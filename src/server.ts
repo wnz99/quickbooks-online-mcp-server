@@ -42,11 +42,14 @@ import { registerReportTools } from "./tools/reports";
 import { registerResources } from "./resources/index";
 import { registerPrompts } from "./prompts/index";
 import { quickbooksClient } from "./clients/quickbooksClient";
+import { registerAdditionalTools } from "./tools/additional";
+import { timingSafeEqual } from "crypto";
 
 export function createServer(config: ServerConfig) {
   if (config.logLevel) setLogLevel(config.logLevel);
 
   const apiKey = process.env.MCP_API_KEY;
+  if (config.transport === 'http' && !apiKey) throw new Error('MCP_API_KEY is required for HTTP transport');
 
   const server = new FastMCP({
     name: "quickbooks-online",
@@ -138,6 +141,7 @@ When creating foreign currency transactions (bills, invoices, etc.), an exchange
   registerVendorTools(server);
   registerVendorCreditTools(server);
   registerReportTools(server);
+  registerAdditionalTools(server);
 
   // Register resources and prompts
   registerResources(server);
@@ -148,6 +152,7 @@ When creating foreign currency transactions (bills, invoices, etc.), an exchange
 }
 
 export async function startServer(config: ServerConfig) {
+  process.env.MCP_TRANSPORT = config.transport;
   const server = createServer(config);
 
   if (config.transport === "stdio") {
@@ -164,17 +169,43 @@ export async function startServer(config: ServerConfig) {
     });
 
     // OAuth routes
-    app.get("/auth", (c) => {
+    const startAuthorization = (c: { header: (name: string, value: string) => void; redirect: (url: string) => Response }) => {
       const authUrl = quickbooksClient.getAuthorizationUrl();
+      const state = new URL(authUrl).searchParams.get("state")!;
+      const secure = process.env.QUICKBOOKS_REDIRECT_URI?.startsWith("https:") ? "; Secure" : "";
+      c.header("Set-Cookie", `qbo_oauth_state=${state}; HttpOnly; SameSite=Lax; Path=/callback; Max-Age=600${secure}`);
+      c.header("Cache-Control", "no-store");
       return c.redirect(authUrl);
+    };
+    const matchesApiKey = (value: string) => {
+      const expected = process.env.MCP_API_KEY;
+      if (!expected) return true;
+      const actualBytes = Buffer.from(value), expectedBytes = Buffer.from(expected);
+      return actualBytes.length === expectedBytes.length && timingSafeEqual(actualBytes, expectedBytes);
+    };
+    app.get("/auth", (c) => {
+      const bearer = c.req.header("Authorization")?.replace(/^Bearer /, "") || "";
+      if (matchesApiKey(bearer)) return startAuthorization(c);
+      c.header("Cache-Control", "no-store");
+      return c.html('<html><body><h1>Connect QuickBooks</h1><form method="post" action="/auth"><label>Server API key <input type="password" name="api_key" required autocomplete="off"></label><button type="submit">Authorize</button></form></body></html>');
+    });
+    app.post("/auth", async (c) => {
+      const body = await c.req.parseBody();
+      if (typeof body.api_key !== "string" || !matchesApiKey(body.api_key)) return c.text("Unauthorized", 401);
+      return startAuthorization(c);
     });
 
     app.get("/callback", async (c) => {
       try {
+        const state = c.req.query("state");
+        const cookie = c.req.header("Cookie")?.split(";").map(part => part.trim()).find(part => part.startsWith("qbo_oauth_state="))?.slice("qbo_oauth_state=".length);
+        if (!state || !cookie || cookie !== state) return c.text("Invalid OAuth browser state", 400);
+        c.header("Set-Cookie", "qbo_oauth_state=; HttpOnly; SameSite=Lax; Path=/callback; Max-Age=0");
+        c.header("Cache-Control", "no-store");
         await quickbooksClient.handleOAuthCallback(c.req.url);
         return c.html(`<html><body style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;margin:0;font-family:Arial,sans-serif;background:#f5f5f5"><h2 style="color:#2E8B57">Successfully connected to QuickBooks!</h2><p>You can close this window now.</p></body></html>`);
-      } catch (error) {
-        logger.error("OAuth callback error", error);
+      } catch {
+        logger.error("QuickBooks OAuth callback rejected");
         return c.html(`<html><body style="display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;margin:0;font-family:Arial,sans-serif;background:#fff0f0"><h2 style="color:#d32f2f">Error connecting to QuickBooks</h2><p>Please check the server logs for details.</p></body></html>`, 500);
       }
     });

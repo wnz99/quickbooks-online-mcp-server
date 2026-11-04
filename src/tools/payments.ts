@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createPaymentSchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerPaymentTools(server: FastMCP) {
   // ── create_payment ───────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "create_payment",
     description: "Create a payment in QuickBooks Online.",
     parameters: createPaymentSchema,
@@ -22,7 +23,7 @@ export function registerPaymentTools(server: FastMCP) {
   });
 
   // ── get_payment ──────────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "get_payment",
     description: "Get a payment by ID from QuickBooks Online.",
     parameters: getPaymentSchema,
@@ -33,7 +34,7 @@ export function registerPaymentTools(server: FastMCP) {
   });
 
   // ── update_payment ───────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "update_payment",
     description: "Update an existing payment in QuickBooks Online.",
     parameters: updatePaymentSchema,
@@ -43,7 +44,7 @@ export function registerPaymentTools(server: FastMCP) {
   });
 
   // ── delete_payment ───────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "delete_payment",
     description: "Delete a payment from QuickBooks Online.",
     parameters: deletePaymentSchema,
@@ -53,7 +54,7 @@ export function registerPaymentTools(server: FastMCP) {
   });
 
   // ── search_payments ──────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "search_payments",
     description: "Search payments in QuickBooks Online that match given criteria.",
     parameters: searchPaymentsSchema,

@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createDepositSchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerDepositTools(server: FastMCP) {
   // ── create_deposit ──
-  server.addTool({
+  registerTool(server, {
     name: "create_deposit",
     description: "Create a deposit in QuickBooks Online.",
     parameters: createDepositSchema,
@@ -22,7 +23,7 @@ export function registerDepositTools(server: FastMCP) {
   });
 
   // ── get_deposit ──
-  server.addTool({
+  registerTool(server, {
     name: "get_deposit",
     description: "Get a deposit by ID from QuickBooks Online.",
     parameters: getDepositSchema,
@@ -33,17 +34,20 @@ export function registerDepositTools(server: FastMCP) {
   });
 
   // ── update_deposit ──
-  server.addTool({
+  registerTool(server, {
     name: "update_deposit",
     description: "Update an existing deposit in QuickBooks Online.",
     parameters: updateDepositSchema,
-    execute: executeQbo("update_deposit", (qbo, args) =>
-      qboRequest(cb => qbo.updateDeposit(args.deposit, cb))
-    ),
+    execute: executeQbo("update_deposit", async (qbo, args) => {
+      const id = args.deposit.Id;
+      if (typeof id !== "string" || !id) throw new Error("deposit.Id is required");
+      const current = await qboRequest<Record<string, unknown>>(cb => qbo.getDeposit(id, cb));
+      return qboRequest(cb => qbo.updateDeposit({ ...current, ...args.deposit, sparse: false }, cb));
+    }),
   });
 
   // ── delete_deposit ──
-  server.addTool({
+  registerTool(server, {
     name: "delete_deposit",
     description: "Delete a deposit from QuickBooks Online.",
     parameters: deleteDepositSchema,
@@ -53,7 +57,7 @@ export function registerDepositTools(server: FastMCP) {
   });
 
   // ── search_deposits ──
-  server.addTool({
+  registerTool(server, {
     name: "search_deposits",
     description: "Search deposits in QuickBooks Online that match given criteria.",
     parameters: searchDepositsSchema,

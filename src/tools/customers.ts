@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createCustomerSchema,
@@ -7,11 +8,11 @@ import {
   searchCustomersSchema,
 } from "../schemas/customers";
 import { qboRequest, type QBQueryResponse } from "../utils/qboRequest";
-import { buildQuickbooksSearchCriteria, type QuickbooksSearchCriteriaInput } from "../utils/search";
+import { buildQuickbooksSearchCriteria } from "../utils/search";
 import { executeQbo } from "../utils/executeQbo";
 
 export function registerCustomerTools(server: FastMCP) {
-  server.addTool({
+  registerTool(server, {
     name: "create_customer",
     description: "Create a customer in QuickBooks Online.",
     parameters: createCustomerSchema,
@@ -20,7 +21,7 @@ export function registerCustomerTools(server: FastMCP) {
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "get_customer",
     description: "Get a customer by ID from QuickBooks Online.",
     parameters: getCustomerSchema,
@@ -30,7 +31,7 @@ export function registerCustomerTools(server: FastMCP) {
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "update_customer",
     description: "Update an existing customer in QuickBooks Online.",
     parameters: updateCustomerSchema,
@@ -39,7 +40,7 @@ export function registerCustomerTools(server: FastMCP) {
     ),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "delete_customer",
     description: "Deactivate a customer in QuickBooks Online (customers cannot be hard-deleted).",
     parameters: deleteCustomerSchema,
@@ -57,7 +58,7 @@ export function registerCustomerTools(server: FastMCP) {
     }),
   });
 
-  server.addTool({
+  registerTool(server, {
     name: "search_customers",
     description: "Search customers in QuickBooks Online that match given criteria.",
     parameters: searchCustomersSchema,
@@ -65,27 +66,7 @@ export function registerCustomerTools(server: FastMCP) {
     execute: executeQbo("search_customers", async (qbo, args) => {
       const { criteria = [], ...options } = args;
 
-      let criteriaToSend: QuickbooksSearchCriteriaInput;
-      if (Array.isArray(criteria) && criteria.length > 0) {
-        const first = criteria[0] as Record<string, unknown>;
-        if (typeof first === "object" && "field" in first) {
-          criteriaToSend = [
-            ...(criteria as Array<Record<string, unknown>>),
-            ...Object.entries(options).map(([key, value]) => ({ field: key, value })),
-          ];
-        } else {
-          criteriaToSend = (criteria as Array<{ key: string; value: unknown }>).reduce<
-            Record<string, unknown>
-          >((acc, { key, value }) => {
-            if (value !== undefined && value !== null) acc[key] = value;
-            return acc;
-          }, { ...options });
-        }
-      } else {
-        criteriaToSend = { ...options };
-      }
-
-      const searchCriteria = buildQuickbooksSearchCriteria(criteriaToSend);
+      const searchCriteria = buildQuickbooksSearchCriteria({ criteria, ...options });
       const response = await qboRequest<QBQueryResponse>(cb => qbo.findCustomers(searchCriteria, cb));
       return response?.QueryResponse?.Customer ?? response?.QueryResponse?.totalCount ?? [];
     }),

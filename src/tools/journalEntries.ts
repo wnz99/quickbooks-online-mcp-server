@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createJournalEntrySchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerJournalEntryTools(server: FastMCP) {
   // ── create_journal_entry ─────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "create_journal_entry",
     description: "Create a journal entry in QuickBooks Online.",
     parameters: createJournalEntrySchema,
@@ -22,7 +23,7 @@ export function registerJournalEntryTools(server: FastMCP) {
   });
 
   // ── get_journal_entry ────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "get_journal_entry",
     description: "Get a journal entry by ID from QuickBooks Online.",
     parameters: getJournalEntrySchema,
@@ -33,7 +34,7 @@ export function registerJournalEntryTools(server: FastMCP) {
   });
 
   // ── update_journal_entry ─────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "update_journal_entry",
     description: "Update an existing journal entry in QuickBooks Online.",
     parameters: updateJournalEntrySchema,
@@ -43,7 +44,7 @@ export function registerJournalEntryTools(server: FastMCP) {
   });
 
   // ── delete_journal_entry ─────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "delete_journal_entry",
     description: "Delete a journal entry from QuickBooks Online.",
     parameters: deleteJournalEntrySchema,
@@ -53,7 +54,7 @@ export function registerJournalEntryTools(server: FastMCP) {
   });
 
   // ── search_journal_entries ───────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "search_journal_entries",
     description: "Search journal entries in QuickBooks Online that match given criteria.",
     parameters: searchJournalEntriesSchema,

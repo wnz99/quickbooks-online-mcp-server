@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import { z } from "zod";
 import {
@@ -10,18 +11,18 @@ import { logger } from "../utils/logger";
 
 export function registerExchangeRateTools(server: FastMCP) {
   // ── get_exchange_rate ──
-  server.addTool({
+  registerTool(server, {
     name: "get_exchange_rate",
-    description: "Get a exchange rate by ID from QuickBooks Online.",
+    description: "Get QuickBooks' exchange rate from a source currency to the company home currency, optionally as of a historical date.",
     parameters: getExchangeRateSchema,
     annotations: { readOnlyHint: true },
     execute: executeQbo("get_exchange_rate", (qbo, args) =>
-      qboRequest(cb => qbo.getExchangeRate(args.id, cb))
+      qboRequest(cb => qbo.getExchangeRate({ sourcecurrencycode: (args.sourcecurrencycode || args.id)!, ...(args.asofdate && { asofdate: args.asofdate }) }, cb))
     ),
   });
 
   // ── update_exchange_rate ──
-  server.addTool({
+  registerTool(server, {
     name: "update_exchange_rate",
     description: "Update an existing exchange rate in QuickBooks Online.",
     parameters: updateExchangeRateSchema,
@@ -31,7 +32,7 @@ export function registerExchangeRateTools(server: FastMCP) {
   });
 
   // ── fetch_exchange_rate ──
-  server.addTool({
+  registerTool(server, {
     name: "fetch_exchange_rate",
     description: "Fetch a live exchange rate from Frankfurter (ECB data). Use this to get current market rates for multi-currency transactions.",
     parameters: z.object({

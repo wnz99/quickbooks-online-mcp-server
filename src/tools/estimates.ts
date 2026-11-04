@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createEstimateSchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerEstimateTools(server: FastMCP) {
   // ── create_estimate ──────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "create_estimate",
     description: "Create an estimate in QuickBooks Online.",
     parameters: createEstimateSchema,
@@ -22,7 +23,7 @@ export function registerEstimateTools(server: FastMCP) {
   });
 
   // ── get_estimate ─────────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "get_estimate",
     description: "Get an estimate by ID from QuickBooks Online.",
     parameters: getEstimateSchema,
@@ -33,7 +34,7 @@ export function registerEstimateTools(server: FastMCP) {
   });
 
   // ── update_estimate ──────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "update_estimate",
     description: "Update an existing estimate in QuickBooks Online.",
     parameters: updateEstimateSchema,
@@ -43,7 +44,7 @@ export function registerEstimateTools(server: FastMCP) {
   });
 
   // ── delete_estimate ──────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "delete_estimate",
     description: "Delete an estimate from QuickBooks Online.",
     parameters: deleteEstimateSchema,
@@ -53,7 +54,7 @@ export function registerEstimateTools(server: FastMCP) {
   });
 
   // ── search_estimates ─────────────────────────────────────────────────
-  server.addTool({
+  registerTool(server, {
     name: "search_estimates",
     description: "Search estimates in QuickBooks Online that match given criteria.",
     parameters: searchEstimatesSchema,

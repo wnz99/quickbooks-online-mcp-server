@@ -1,3 +1,4 @@
+import { registerTool } from "../utils/registerTool";
 import type { FastMCP } from "fastmcp";
 import {
   createTimeActivitySchema,
@@ -12,7 +13,7 @@ import { executeQbo } from "../utils/executeQbo";
 
 export function registerTimeActivityTools(server: FastMCP) {
   // ── create_time_activity ──
-  server.addTool({
+  registerTool(server, {
     name: "create_time_activity",
     description: "Create a time activity in QuickBooks Online.",
     parameters: createTimeActivitySchema,
@@ -22,7 +23,7 @@ export function registerTimeActivityTools(server: FastMCP) {
   });
 
   // ── get_time_activity ──
-  server.addTool({
+  registerTool(server, {
     name: "get_time_activity",
     description: "Get a time activity by ID from QuickBooks Online.",
     parameters: getTimeActivitySchema,
@@ -33,7 +34,7 @@ export function registerTimeActivityTools(server: FastMCP) {
   });
 
   // ── update_time_activity ──
-  server.addTool({
+  registerTool(server, {
     name: "update_time_activity",
     description: "Update an existing time activity in QuickBooks Online.",
     parameters: updateTimeActivitySchema,
@@ -43,7 +44,7 @@ export function registerTimeActivityTools(server: FastMCP) {
   });
 
   // ── delete_time_activity ──
-  server.addTool({
+  registerTool(server, {
     name: "delete_time_activity",
     description: "Delete a time activity from QuickBooks Online.",
     parameters: deleteTimeActivitySchema,
@@ -53,7 +54,7 @@ export function registerTimeActivityTools(server: FastMCP) {
   });
 
   // ── search_time_activities ──
-  server.addTool({
+  registerTool(server, {
     name: "search_time_activities",
     description: "Search time activitys in QuickBooks Online that match given criteria.",
     parameters: searchTimeActivitiesSchema,
