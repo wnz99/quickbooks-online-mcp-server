@@ -13,11 +13,11 @@ export function registerExchangeRateTools(server: FastMCP) {
   // ── get_exchange_rate ──
   registerTool(server, {
     name: "get_exchange_rate",
-    description: "Get a exchange rate by ID from QuickBooks Online.",
+    description: "Get QuickBooks' exchange rate from a source currency to the company home currency, optionally as of a historical date.",
     parameters: getExchangeRateSchema,
     annotations: { readOnlyHint: true },
     execute: executeQbo("get_exchange_rate", (qbo, args) =>
-      qboRequest(cb => qbo.getExchangeRate(args.id, cb))
+      qboRequest(cb => qbo.getExchangeRate({ sourcecurrencycode: (args.sourcecurrencycode || args.id)!, ...(args.asofdate && { asofdate: args.asofdate }) }, cb))
     ),
   });
 

@@ -8,4 +8,5 @@ const directory = mkdtempSync(path.join(tmpdir(), "qbo-tests-"));
 process.env.QUICKBOOKS_TOKEN_STORE_PATH = path.join(directory, "tokens.env");
 delete process.env.QUICKBOOKS_CLIENT_ID;
 delete process.env.QUICKBOOKS_CLIENT_SECRET;
+delete process.env.QUICKBOOKS_TOKEN_FILE;
 afterAll(() => rmSync(directory, { recursive: true, force: true }));

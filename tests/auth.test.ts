@@ -60,7 +60,7 @@ describe("hosted OAuth", () => {
     let resolveExchange!: (value: unknown) => void;
     oauth.exchange.mockReturnValue(new Promise(resolve => { resolveExchange = resolve; }));
     oauth.refresh.mockResolvedValue({ token: { access_token: "new-company-access", refresh_token: "new-company-rotated" } });
-    const client = new QuickbooksClient(config);
+    const client = new QuickbooksClient({ ...config, realmId: "new-company" });
     const state = new URL(client.getAuthorizationUrl()).searchParams.get("state");
     const callback = client.handleOAuthCallback(`https://example.test/callback?state=${state}&code=c&realmId=new-company`);
     const authentication = client.authenticate();

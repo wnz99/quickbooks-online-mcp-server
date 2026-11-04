@@ -43,4 +43,10 @@ Symlink token-store writes preserve volume links but are not atomic, matching up
 Uploads can read explicitly allowed server directories; in HTTP mode there are no default allowed directories.
 Production deployments should set `MCP_API_KEY`, use HTTPS, and mount a persistent writable token store.
 
+## Existing Deasy deployment compatibility
+
+The port also incorporates the three changes already running on `deploy/deasy-m23` through `5c3f788`.
+Existing `QUICKBOOKS_TOKEN_FILE` JSON storage remains supported without converting or relocating credentials; when set, it takes precedence over the dotenv token store. Configured companies remain pinned during authorization and persisted-token loading. HTTP requires `MCP_API_KEY`.
+Searches retain the deployed SDK query normalization and count-marker workaround. Reports use documented REST endpoints with deployed aliases and parameter validation; the generic `get_report` interface remains intact. `get_exchange_rate` accepts the deployed currency/date options and keeps `id` as a legacy currency-code alias. Gross/no-VAT bill fields remain validated and forwarded.
+
 Imported source attribution and license: `THIRD_PARTY_NOTICES.md` and `third_party/intuit-LICENSE`.

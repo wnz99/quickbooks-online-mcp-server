@@ -9,6 +9,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import open from 'open';
+import type { ReportName } from '../schemas/reports';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -47,6 +48,7 @@ dotenv.config({ path: TOKEN_STORE_PATH, override: true });
 // which checks token freshness on every invocation rather than only at startup.
 
 export class QuickbooksClient {
+  private readonly tokenFile = process.env.QUICKBOOKS_TOKEN_FILE?.trim();
   private readonly clientId: string;
   private readonly clientSecret: string;
   private refreshToken?: string;
@@ -79,13 +81,32 @@ export class QuickbooksClient {
     realmId?: string;
     environment: string;
     redirectUri: string;
+  } = {
+    clientId: process.env.QUICKBOOKS_CLIENT_ID || '',
+    clientSecret: process.env.QUICKBOOKS_CLIENT_SECRET || '',
+    refreshToken: process.env.QUICKBOOKS_REFRESH_TOKEN || undefined,
+    realmId: process.env.QUICKBOOKS_REALM_ID || undefined,
+    environment: process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox',
+    redirectUri: process.env.QUICKBOOKS_REDIRECT_URI || 'http://localhost:8000/callback',
   }) {
+    if (!config.clientId || !config.clientSecret) throw new Error('QuickBooks client credentials must be configured');
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
     this.refreshToken = config.refreshToken;
     this.realmId = config.realmId;
     this.environment = config.environment;
     this.redirectUri = config.redirectUri;
+    if (this.tokenFile) {
+      if (!path.isAbsolute(this.tokenFile)) throw new Error('QUICKBOOKS_TOKEN_FILE must be an absolute path');
+      if (fs.existsSync(this.tokenFile)) {
+        const saved = JSON.parse(fs.readFileSync(this.tokenFile, 'utf8'));
+        if (typeof saved.refreshToken !== 'string' || !saved.refreshToken || typeof saved.realmId !== 'string' || !saved.realmId || (this.realmId && saved.realmId !== this.realmId)) {
+          throw new Error('Saved QuickBooks connection does not match the configured company');
+        }
+        this.refreshToken = saved.refreshToken;
+        this.realmId = saved.realmId;
+      }
+    }
     this.oauthClient = new OAuthClient({
       clientId: this.clientId,
       clientSecret: this.clientSecret,
@@ -108,6 +129,10 @@ export class QuickbooksClient {
   // startup can be silently superseded on disk by another process.
   private readPersistedRefreshToken(): string | undefined {
     try {
+      if (this.tokenFile) {
+        const saved = JSON.parse(fs.readFileSync(this.tokenFile, 'utf8'));
+        return saved.realmId === this.realmId && typeof saved.refreshToken === 'string' ? saved.refreshToken : undefined;
+      }
       // Parse with dotenv itself so the value is normalized identically to how
       // the in-memory token was loaded at startup — surrounding quotes stripped,
       // inline comments removed, optional `export ` prefix handled. A naive
@@ -293,6 +318,12 @@ export class QuickbooksClient {
           res.end('Invalid or missing state parameter.');
           return;
         }
+        const incomingRealm = new URL(req.url, `http://localhost:${port}`).searchParams.get('realmId');
+        if (!incomingRealm || (this.realmId && incomingRealm !== this.realmId)) {
+          res.writeHead(400, { 'Content-Type': 'text/plain' });
+          res.end('QuickBooks company does not match the configured connection');
+          return;
+        }
 
         // A duplicate callback for the same code must NOT be exchanged again, or
         // Intuit revokes the token minted by the first hit. `codeExchangeStarted`
@@ -312,7 +343,7 @@ export class QuickbooksClient {
 
             // Save tokens
             this.refreshToken = tokens.refresh_token;
-            this.realmId = tokens.realmId;
+            this.realmId = incomingRealm;
             this.saveTokensToEnv();
 
             // Send success response
@@ -402,6 +433,18 @@ export class QuickbooksClient {
   }
 
   private saveTokensToEnv(): void {
+    if (this.tokenFile) {
+      fs.mkdirSync(path.dirname(this.tokenFile), { recursive: true, mode: 0o700 });
+      const temporary = `${this.tokenFile}.tmp.${process.pid}`;
+      try {
+        fs.writeFileSync(temporary, JSON.stringify({ refreshToken: this.refreshToken, realmId: this.realmId }), { mode: 0o600 });
+        fs.chmodSync(temporary, 0o600);
+        fs.renameSync(temporary, this.tokenFile);
+      } finally {
+        try { fs.unlinkSync(temporary); } catch { /* best effort */ }
+      }
+      return;
+    }
     const tokenPath = TOKEN_STORE_PATH;
     const envContent = fs.existsSync(tokenPath) ? fs.readFileSync(tokenPath, 'utf-8') : '';
     const envLines = envContent.split('\n');
@@ -702,6 +745,8 @@ export class QuickbooksClient {
     }
     // Consume synchronously before exchanging a one-use code. Duplicate callbacks cannot revoke tokens.
     this.pendingStates.delete(state);
+    const callbackRealm = url.searchParams.get("realmId");
+    if (!callbackRealm || (this.realmId && callbackRealm !== this.realmId)) throw new Error("QuickBooks company does not match the configured connection");
     this.callbackInFlight = (async () => {
       const response = await this.oauthClient.createToken(callbackUrl);
       const tokens = response.token;
@@ -724,7 +769,6 @@ export class QuickbooksClient {
 
   async forceOAuthFlow(): Promise<void> {
     this.refreshToken = undefined;
-    this.realmId = undefined;
     await this.startOAuthFlow();
   }
 
@@ -733,6 +777,23 @@ export class QuickbooksClient {
       throw new Error('Quickbooks not authenticated. Call authenticate() first');
     }
     return this.quickbooksInstance;
+  }
+
+  /** Use documented report endpoints; SDK aliases include retired routes. */
+  async getReport(reportName: ReportName, params: Record<string, unknown> = {}): Promise<unknown> {
+    await this.authenticate();
+    const host = this.environment === 'sandbox' ? 'https://sandbox-quickbooks.api.intuit.com' : 'https://quickbooks.api.intuit.com';
+    const url = new URL(`/v3/company/${encodeURIComponent(this.realmId!)}/reports/${reportName}`, host);
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
+    }
+    url.searchParams.set('minorversion', '75');
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${this.accessToken}`, Accept: 'application/json' },
+      signal: AbortSignal.timeout(60_000),
+    });
+    if (!response.ok) throw new Error(`QuickBooks report request failed (HTTP ${response.status}, intuit_tid: ${response.headers.get('intuit_tid') || 'unavailable'})`);
+    return response.json();
   }
 }
 
@@ -755,6 +816,7 @@ function getClient(): QuickbooksClient {
 
 // Keep startup lazy: health and legal pages work before a company is connected.
 export const quickbooksClient = {
+  getReport: (name: ReportName, params?: Record<string, unknown>) => getClient().getReport(name, params),
   authenticate: () => getClient().authenticate(),
   refreshAccessToken: () => getClient().refreshAccessToken(),
   getQuickbooks: () => getClient().getQuickbooks(),

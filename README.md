@@ -102,6 +102,12 @@ bun run build && bun run start:http
 
 The HTTP server listens on port 3000 (configurable via `MCP_PORT`) with a health check at `/health`.
 
+HTTP mode requires `MCP_API_KEY`. Send it as `Authorization: Bearer <key>` when connecting to `/mcp` or starting OAuth at `/auth`. Keep the key in a private credential file or secret store.
+
+For persistent deployments, set `QUICKBOOKS_TOKEN_FILE=/data/quickbooks-tokens.json` and mount a persistent volume at `/data`. OAuth callbacks and token refreshes save credentials atomically there, with mode 600. Saved tokens take precedence over the initial environment token. Set `QUICKBOOKS_REALM_ID` to pin the connection to one company. Back up the token volume privately.
+
+To reconnect remotely, configure `QUICKBOOKS_REDIRECT_URI` to the deployed HTTPS `/callback` URL and register that exact URL in the Intuit developer app. With the same `MCP_API_KEY` available locally, run `bun run auth`; the deployed server generates and validates the single-use OAuth state. Local callbacks use the launcher's own callback listener.
+
 ### Docker
 
 ```bash
@@ -145,6 +151,12 @@ If the server is running remotely (e.g., via Docker or a cloud host), use the st
 ```
 
 ## Supported Entities
+
+Search tools preserve filters together with pagination and count options. Both nested `criteria` arrays and advanced `filters` arrays are normalized by the shared adapter. Sorting by `Id` is rejected because QuickBooks no longer supports it.
+
+Reports use Intuit's 29 documented report endpoints directly, including `GeneralLedger`. Existing aliases such as `GeneralLedgerDetail` and `CustomerSales` map to current names. Unsupported reports are rejected. Modern report JSON is returned unchanged; consumers must handle nested accounts, empty strings, and section rows. `qzurl` is rejected, and `group_by` is accepted only for TransactionList reports. See [Intuit's report migration notice](https://medium.com/intuitdev/upcoming-changes-to-reports-apis-5083ec9aadce).
+
+`get_exchange_rate` accepts `sourcecurrencycode` (for example `EUR`) and optional `asofdate` (`YYYY-MM-DD`), rather than an ID. Its target currency is the company home currency.
 
 All tools follow the naming pattern `{action}_{entity}` (e.g., `create_invoice`, `search_customers`).
 

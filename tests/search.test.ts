@@ -10,11 +10,11 @@ describe("search criteria", () => {
   });
   it("preserves advanced filters and count/sort options", () => {
     expect(buildQuickbooksSearchCriteria({ filters: [{ field: "Active", value: false }], count: true, desc: "Name" })).toEqual([
-      { field: "Active", value: false, operator: undefined }, { field: "desc", value: "Name" }, { field: "count", value: true },
+      { count: true }, { field: "Active", value: false }, { field: "desc", value: "Name" },
     ]);
   });
   it("preserves simple objects and raw arrays", () => {
-    expect(buildQuickbooksSearchCriteria({ Name: "test" })).toEqual({ Name: "test" });
+    expect(buildQuickbooksSearchCriteria({ Name: "test" })).toEqual([{ field: "Name", value: "test" }]);
     expect(buildQuickbooksSearchCriteria([{ field: "Name", value: "test" }])).toEqual([{ field: "Name", value: "test" }]);
   });
 });

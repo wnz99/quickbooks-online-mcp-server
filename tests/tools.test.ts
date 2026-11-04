@@ -2,7 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import legacyNames from "./legacy-tools.json";
 
-const state = vi.hoisted(() => ({ qbo: {} as Record<string, ReturnType<typeof vi.fn>>, tools: [] as unknown[] }));
+const state = vi.hoisted(() => ({ qbo: {} as Record<string, ReturnType<typeof vi.fn>>, tools: [] as unknown[], report: vi.fn() }));
 vi.mock("fastmcp", () => ({ FastMCP: class {
   constructor() { state.tools = []; }
   addTool(tool: unknown) { state.tools.push(tool); }
@@ -10,7 +10,7 @@ vi.mock("fastmcp", () => ({ FastMCP: class {
   addPrompt() {}
 } }));
 vi.mock("../src/clients/quickbooksClient", () => ({
-  quickbooksClient: { authenticate: vi.fn(), getQuickbooks: () => state.qbo },
+  quickbooksClient: { authenticate: vi.fn(), getQuickbooks: () => state.qbo, getReport: state.report },
   QuickbooksClient: { getInstance: async () => state.qbo },
 }));
 import { createServer } from "../src/server";
@@ -26,7 +26,7 @@ async function call(name: string, input: Record<string, unknown>) {
 function respond(value: unknown) {
   return vi.fn((...args: unknown[]) => { (args[args.length - 1] as (err: null, result: unknown) => void)(null, value); });
 }
-beforeEach(() => { state.qbo = {}; createServer({ transport: "stdio", logLevel: "error" }); });
+beforeEach(() => { state.qbo = {}; state.report.mockReset(); createServer({ transport: "stdio", logLevel: "error" }); });
 afterEach(() => vi.unstubAllEnvs());
 
 describe("interface compatibility", () => {
@@ -100,12 +100,12 @@ describe("upstream behavior", () => {
     await call("update_deposit", { deposit: { Id: "1", SyncToken: "3", PrivateNote: "updated" } });
     expect(state.qbo.updateDeposit.mock.calls[0][0]).toMatchObject({ DepositToAccountRef: { value: "2" }, Line: [{ Amount: 10 }], PrivateNote: "updated" });
   });
-  it("uses the installed SDK GeneralLedgerDetail method and strips BalanceSheet start_date", async () => {
-    state.qbo.reportGeneralLedgerDetail = respond({ Rows: [] });
-    state.qbo.reportBalanceSheet = respond({ Rows: [] });
+  it("uses documented report names and strips BalanceSheet start_date", async () => {
+    state.report.mockResolvedValue({ Rows: [] });
     expect((await call("get_report", { reportType: "GeneralLedger" })).success).toBe(true);
+    expect(state.report).toHaveBeenCalledWith("GeneralLedger", {});
     await call("get_report", { reportType: "BalanceSheet", params: { start_date: "2026-01-01", end_date: "2026-02-01" } });
-    expect(state.qbo.reportBalanceSheet.mock.calls[0][0]).toEqual({ end_date: "2026-02-01" });
+    expect(state.report).toHaveBeenLastCalledWith("BalanceSheet", { end_date: "2026-02-01" });
   });
   it("preserves structured ParentRef for account reparenting", async () => {
     state.qbo.getAccount = respond({ Id: "1", SyncToken: "0" });
